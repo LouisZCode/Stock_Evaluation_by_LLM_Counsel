@@ -7,14 +7,12 @@ download_clean_fillings
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from edgar import Company, set_identity
+from edgar import Company
 from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 from tqdm import tqdm
 
-from config import SEC_IDENTITY
-set_identity(SEC_IDENTITY)
 
 # TODO Add a catch to TypeError: 'NoneType' has no len()  AKA it does not exist
 

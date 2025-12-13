@@ -7,7 +7,6 @@ simple_explaining_agent, my_portfolio_agent, opportunity_agent
 
 """
 
-
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from typing import TypedDict
@@ -15,6 +14,12 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 
 from dotenv import load_dotenv
 from .prompt_loader import load_prompts
+
+from functions import (
+    read_my_portfolio,add_to_portfolio,remove_from_portfolio, add_cash_tool, withdraw_cash_tool,
+    cash_position_count, review_stock_data
+    )
+
 load_dotenv()
 
 prompts = load_prompts()
@@ -72,12 +77,12 @@ simple_explaining_agent = create_agent(
     system_prompt=explainer_prompt,
 )
 
-"""
+
 my_portfolio_agent = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=my_portfolio_prompt,
     checkpointer=InMemorySaver(),
-    tools=[read_my_portfolio, add_to_portfolio, remove_from_portfolio,  add_cash_tool, withdraw_cash_tool, cash_position_count],
+    tools=[read_my_portfolio, add_to_portfolio, remove_from_portfolio, add_cash_tool, withdraw_cash_tool, cash_position_count],
     middleware=[
         HumanInTheLoopMiddleware(
             interrupt_on={
@@ -99,4 +104,3 @@ opportunity_agent = create_agent(
     tools=[read_my_portfolio, review_stock_data],
     checkpointer=InMemorySaver()
 )
-"""
