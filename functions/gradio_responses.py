@@ -21,8 +21,12 @@ import random
 
 from functions import (
     ticker_admin_tool, _stock_market_data, ticker_info_db, _save_stock_evals, _update_portfolio_info, 
-    _extract_structured_data, download_clean_filings
+    _extract_structured_data
     )
+
+from vector_store import download_clean_filings
+
+
 """
 Agent that reads the vector stores, and gives you info about the quaterly information
 """

@@ -1,5 +1,5 @@
 """
-The tool used to get clean data from the SEC official website.
+The tool used to get clean data from the SEC official website and add it to the vector store that already exists.
 
 You can find:
 download_clean_fillings
@@ -12,7 +12,7 @@ from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 from tqdm import tqdm
-from config import SEC_IDENTITY
+from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path
 
 set_identity(SEC_IDENTITY)
 
@@ -28,10 +28,10 @@ def download_clean_filings(ticker, keep_files=False): # <--- Added flag
     
     # 1. Setup
     DATA_FOLDER = "data"
-    DB_PATH = "Quarterly_Reports_DB"
+    DB_PATH = vector_store_path
     os.makedirs(DATA_FOLDER, exist_ok=True)
     
-    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     
     company = Company(ticker)
     filings = company.get_filings(form="10-Q").latest(8)
@@ -87,7 +87,7 @@ def download_clean_filings(ticker, keep_files=False): # <--- Added flag
             
             # 3. Create Vector Store
             if all_chunks:
-                if os.path.exists(DB_PATH):
+                if os.path.exists(vector_store_path):
                     print("Appending to existing Vector Store...")
                     vector_store = FAISS.load_local(DB_PATH, embedding_model, allow_dangerous_deserialization=True)
                     vector_store.add_documents(all_chunks)
@@ -95,7 +95,7 @@ def download_clean_filings(ticker, keep_files=False): # <--- Added flag
                     print("Creating NEW Vector Store...")
                     vector_store = FAISS.from_documents(all_chunks, embedding_model)
                     
-                vector_store.save_local(DB_PATH)
+                vector_store.save_local(vector_store_path)
                 print("Success! Vector store saved.")
             else:
                 print("No chunks were generated.")
