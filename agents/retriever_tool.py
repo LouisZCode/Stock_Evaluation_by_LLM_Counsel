@@ -18,6 +18,10 @@ def retriever_tool(query: str) -> str:
     Search SEC 8-Q quarterly financial filings for a company.
     Query with the ticker symbol to get financial data about earnings, revenue, growth, etc.
     """
+    if len(query.split()) <= 5:
+        query = f"{query} financial strength and earnings revenue growth"
+
+
     embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vector_store = FAISS.load_local(
         vector_store_path,

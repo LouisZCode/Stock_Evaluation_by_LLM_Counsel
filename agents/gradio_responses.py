@@ -27,9 +27,7 @@ from functions import (
 from market_data import _fake_stock_market_data
 
 from vector_store import download_clean_fillings
-
-
-#TODO: ad dprint and yield in llm answers.
+from logs import start_new_log, log_llm_conversation
 
 
 """
@@ -74,27 +72,36 @@ async def response_quaterly(message, history):
             yield "Getting data for this company from the SEC directly, this will take 1 minute..."
             await asyncio.sleep(1)
             download_clean_fillings(ticker_symbol)
-            
-            #OPENAI Research
-            yield "Data received, now the counsel with review the data and come with a veridict, just a moment..."
+
+            yield "Data received, now the counsel will review the data and come with a verdict, just a moment..."
             time.sleep(2)
+
+            # Start logging for this research session
+            log_file = start_new_log(ticker_symbol)
 
             LLM_Answers = []
 
             prices_pe_data = _fake_stock_market_data(ticker_symbol)
 
-            try: 
+            #OPENAI Research
+            try:
                 response_openai = await openai_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
+                log_llm_conversation("OpenAI", response_openai, log_file)
                 data_openai = _extract_structured_data(response_openai["messages"][-1].content)
-                LLM_Answers.append(data_openai)
-                print(f"OpenAi Says:{data_openai}")
-                yield f"OpenAI recommends: {data_openai["recommendation"]}\n\n"
+
+                if data_openai and "recommendation" in data_openai:
+                    LLM_Answers.append(data_openai)
+                    print(f"OpenAI says: {data_openai}")
+                    yield f"OpenAI recommends: {data_openai['recommendation']}\n\n"
+                else:
+                    print(f"OpenAI returned invalid data: {data_openai}")
+
                 time.sleep(2)
             except Exception as e:
-                print(f"OpenAI failed: {e}")    
+                print(f"OpenAI failed: {e}")
 
             #CLAUDE Research
             try:
@@ -102,24 +109,35 @@ async def response_quaterly(message, history):
                     {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
+                log_llm_conversation("Claude", response_claude, log_file)
                 data_claude = _extract_structured_data(response_claude["messages"][-1].content)
-                LLM_Answers.append(data_claude)
-                print(f"Claude says: {data_claude}")
-                yield f"Claude recommends: {data_claude["recommendation"]}\n\n"
+
+                if data_claude and "recommendation" in data_claude:
+                    LLM_Answers.append(data_claude)
+                    print(f"Claude says: {data_claude}")
+                    yield f"Claude recommends: {data_claude['recommendation']}\n\n"
+                else:
+                    print(f"Claude returned invalid data: {data_claude}")
+
             except Exception as e:
-                print(f"Claude failed: {e}") 
+                print(f"Claude failed: {e}")
 
-
-            #Mistral Research
+            #MISTRAL Research
             try:
                 response_mistral = await mistral_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
+                log_llm_conversation("Mistral", response_mistral, log_file)
                 data_mistral = _extract_structured_data(response_mistral["messages"][-1].content)
-                LLM_Answers.append(data_mistral)
-                print(f"Mistral says: {data_mistral}")
-                yield f"Mistral recommends: {data_mistral["recommendation"]}\n\n"
+
+                if data_mistral and "recommendation" in data_mistral:
+                    LLM_Answers.append(data_mistral)
+                    print(f"Mistral says: {data_mistral}")
+                    yield f"Mistral recommends: {data_mistral['recommendation']}\n\n"
+                else:
+                    print(f"Mistral returned invalid data: {data_mistral}")
+
             except Exception as e:
                 print(f"Mistral failed: {e}") 
 

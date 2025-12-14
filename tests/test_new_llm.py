@@ -8,7 +8,7 @@ sys.path.insert(0, "/Users/luiszg/Desktop/GitHub/Stock_Evaluation_by_LLM_Counsel
 from agents import mistral_finance_boy
 
 response = mistral_finance_boy.invoke(
-    {"messages" : [{"role": "user", "content": "Tell me more about palantir"}]},
+    {"messages" : [{"role": "user", "content": "Tell me more about NVDA"}]},
     {"configurable" : {"thread_id" : "001_test"}}
 )
 
