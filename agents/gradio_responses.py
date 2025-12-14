@@ -6,8 +6,8 @@ response_quaterly, response_my_portfolio, find_opportunities, update_risk_state
 """
 
 
-from agents import (
-    checker_agent, simple_explaining_agent, anthropic_finance_boy, groq_finance_boy,
+from .agents import (
+    checker_agent, simple_explaining_agent, anthropic_finance_boy, mistral_finance_boy,
 openai_finance_boy, opportunity_agent, my_portfolio_agent
 )
 
@@ -76,7 +76,7 @@ async def response_quaterly(message, history):
             download_clean_fillings(ticker_symbol)
             
             #OPENAI Research
-            yield "Data received, now the councel with review the data and come with a veridict, just a moment..."
+            yield "Data received, now the counsel with review the data and come with a veridict, just a moment..."
             time.sleep(2)
 
             LLM_Answers = []
@@ -110,18 +110,18 @@ async def response_quaterly(message, history):
                 print(f"Claude failed: {e}") 
 
 
-            #Groq Research
+            #Mistral Research
             try:
-                response_groq = await groq_finance_boy.ainvoke(
+                response_mistral = await mistral_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
-                data_groq = _extract_structured_data(response_groq["messages"][-1].content)
-                LLM_Answers.append(data_groq)
-                #print(f"Google says: {data_claude}")
-                yield f"Groq recommends: {data_groq["recommendation"]}\n\n"
+                data_mistral = _extract_structured_data(response_mistral["messages"][-1].content)
+                LLM_Answers.append(data_mistral)
+                print(f"Mistral says: {data_mistral}")
+                yield f"Mistral recommends: {data_mistral["recommendation"]}\n\n"
             except Exception as e:
-                print(f"Groq failed: {e}") 
+                print(f"Mistral failed: {e}") 
 
             if LLM_Answers:
                 recommendations_list = [answer["recommendation"] for answer in LLM_Answers]
@@ -140,7 +140,7 @@ async def response_quaterly(message, history):
                 #for now:
                 selected_reason = random.choice(reasons_list)
 
-                saved_database = _save_stock_evals(ticker_symbol, LLM_Answers, price, price_description,  p_e, selected_reason)
+                saved_database = _save_stock_evals(ticker_symbol, recommendations_list, price, price_description,  p_e, selected_reason)
 
                 if recommendations_list.count("Buy") >= 2:
                     yield f"The councel of LLMS recommends to BUY this stock, the reason:\n\n{selected_reason}\n\n{saved_database}"

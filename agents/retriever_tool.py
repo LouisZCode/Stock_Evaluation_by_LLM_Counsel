@@ -7,19 +7,27 @@ retriever_tool
 """
 
 
-from langchain_core.tools import create_retriever_tool, tool
+from langchain_core.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from config import EMBEDDING_MODEL, vector_store_path
 
-embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-vector_store = FAISS.load_local(vector_store_path, embedding, allow_dangerous_deserialization=True)
-retriever = vector_store.as_retriever(
-    search_kwargs={"k": 5}
-)
+@tool
+def retriever_tool(query: str) -> str:
+    """
+    Search SEC 8-Q quarterly financial filings for a company.
+    Query with the ticker symbol to get financial data about earnings, revenue, growth, etc.
+    """
+    embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    vector_store = FAISS.load_local(
+        vector_store_path,
+        embedding,
+        allow_dangerous_deserialization=True
+    )
+    retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+    results = retriever.invoke(query)
 
-retriever_tool = create_retriever_tool(
-    retriever,
-    name="retriever_tool",
-    description="Search through the document knowledge base to find relevant information."
-)
+    if not results:
+        return "No relevant financial information found for this query."
+
+    return "\n\n".join([doc.page_content for doc in results])

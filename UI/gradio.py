@@ -1,5 +1,5 @@
 
-from functions import response_quaterly,response_my_portfolio, _update_portfolio_info, find_opportunities, update_risk_state
+from agents import response_quaterly,response_my_portfolio, _update_portfolio_info, find_opportunities, update_risk_state
 from config import portfolio_path
 import pandas as pd
 import gradio as gr

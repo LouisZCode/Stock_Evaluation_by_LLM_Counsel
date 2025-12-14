@@ -65,8 +65,8 @@ anthropic_finance_boy = create_agent(
 )
 
 
-groq_finance_boy = create_agent(
-    model="groq:openai/gpt-oss-120b",
+mistral_finance_boy = create_agent(
+    model="mistral-large-2512",
     system_prompt=quarter_results_prompt,
     checkpointer=InMemorySaver(),
     tools=[retriever_tool],
