@@ -24,7 +24,7 @@ from functions import (
     _extract_structured_data
     )
 
-from vector_store import download_clean_filings
+from vector_store import download_clean_fillings
 
 
 """
@@ -68,7 +68,7 @@ async def response_quaterly(message, history):
 
             yield "Getting data for this company from the SEC directly, this will take 1 minute..."
             await asyncio.sleep(1)
-            download_clean_filings(ticker_symbol)
+            download_clean_fillings(ticker_symbol)
             
             #OPENAI Research
             yield "Data received, now the councel with review the data and come with a veridict, just a moment..."

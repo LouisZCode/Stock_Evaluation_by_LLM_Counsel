@@ -1,5 +1,6 @@
 """
-The tool used to get clean data from the SEC official website and add it to the vector store that already exists.
+The tool used to get clean data from the SEC official website and add it to the vector store.
+Creates a new vector store if none exists, or appends to the existing one.
 
 You can find:
 download_clean_fillings
@@ -19,7 +20,7 @@ set_identity(SEC_IDENTITY)
 
 # TODO Add a catch to TypeError: 'NoneType' has no len()  AKA it does not exist
 
-def download_clean_filings(ticker, keep_files=False): # <--- Added flag
+def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
     """
     Gets filings, processes them, and saves to VectorStore.
     keep_files=True: Saves HTMLs in 'data/' forever.
@@ -27,7 +28,7 @@ def download_clean_filings(ticker, keep_files=False): # <--- Added flag
     """
     
     # 1. Setup
-    DATA_FOLDER = "data"
+    DATA_FOLDER = "data/temporary"
     DB_PATH = vector_store_path
     os.makedirs(DATA_FOLDER, exist_ok=True)
     
@@ -79,23 +80,23 @@ def download_clean_filings(ticker, keep_files=False): # <--- Added flag
             print(f"Error processing {clean_filename}: {e}")
 
         finally:
-            # --- LOGIC: Delete only if we don't want to keep them ---
+            # Clean up temp file if not keeping
             if not keep_files and os.path.exists(full_file_path):
                 os.remove(full_file_path)
-                # print(f"Deleted temp file: {clean_filename}")
 
-            
-            # 3. Create Vector Store
-            if all_chunks:
-                if os.path.exists(vector_store_path):
-                    print("Appending to existing Vector Store...")
-                    vector_store = FAISS.load_local(DB_PATH, embedding_model, allow_dangerous_deserialization=True)
-                    vector_store.add_documents(all_chunks)
-                else:
-                    print("Creating NEW Vector Store...")
-                    vector_store = FAISS.from_documents(all_chunks, embedding_model)
-                    
-                vector_store.save_local(vector_store_path)
-                print("Success! Vector store saved.")
-            else:
-                print("No chunks were generated.")
+    # 3. Save to Vector Store (once, after all filings processed)
+    if not all_chunks:
+        print("No chunks were generated.")
+        return
+
+    if os.path.exists(vector_store_path):
+        print("Appending to existing Vector Store...")
+        vector_store = FAISS.load_local(DB_PATH, embedding_model, allow_dangerous_deserialization=True)
+        vector_store.add_documents(all_chunks)
+    else:
+        print("Creating NEW Vector Store...")
+        os.makedirs(os.path.dirname(vector_store_path), exist_ok=True)
+        vector_store = FAISS.from_documents(all_chunks, embedding_model)
+
+    vector_store.save_local(vector_store_path)
+    print(f"Success! {len(all_chunks)} chunks saved for {ticker}.")

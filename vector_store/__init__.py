@@ -1,6 +1,6 @@
 
 
-from .vs_addition import download_clean_filings
+from .vs_addition import download_clean_fillings
 
 
-print("Vextor Store modules loaded...")
+print("Vector Store modules loaded...")

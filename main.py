@@ -4,15 +4,15 @@
 
 from config import trades_log_path, cash_log, portfolio_path, stock_evaluations_path
 from functions import initialize_databases
-from vector_store import download_clean_filings
+from vector_store import download_clean_fillings
 
 
 
 
 initialize_databases(trades_log_path, portfolio_path, cash_log, stock_evaluations_path)
 
-stock = "APPL"
-result = download_clean_filings(stock)
+stock = "AAPL"
+result = download_clean_fillings(stock)
 print(result)
 
 """
