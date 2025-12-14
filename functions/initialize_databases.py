@@ -8,6 +8,7 @@ import pandas as pd
 
 
 def initialize_databases(
+    database_path: str,
     trade_log_path: str,
     portfolio_path: str,
     cash_log_path: str,
@@ -23,6 +24,11 @@ def initialize_databases(
         stock_evals_path: Path to stock evaluations CSV
     """
     
+    if not os.path.exists(database_path):
+        os.makedirs(database_path, exist_ok=True)
+        print(f"✓ Created {database_path}")
+
+
     # Create trades log if doesn't exist
     if not os.path.exists(trade_log_path):
         new_dataframe = pd.DataFrame(
