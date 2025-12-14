@@ -14,6 +14,7 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 
 from dotenv import load_dotenv
 from .prompt_loader import load_prompts
+from .retriever_tool import retriever_tool
 
 from functions import (
     read_my_portfolio,add_to_portfolio,remove_from_portfolio, add_cash_tool, withdraw_cash_tool,
@@ -50,7 +51,7 @@ openai_finance_boy = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=quarter_results_prompt,
     checkpointer=InMemorySaver(),
-    tools=[],
+    tools=[retriever_tool],
     response_format=FinancialInformation
 )
 
@@ -59,16 +60,16 @@ anthropic_finance_boy = create_agent(
     model="anthropic:claude-haiku-4-5",
     system_prompt=quarter_results_prompt,
     checkpointer=InMemorySaver(),
-    tools=[],
+    tools=[retriever_tool],
     response_format=FinancialInformation
 )
 
 
 groq_finance_boy = create_agent(
-    model="groq:llama-3.1-8b-instant",
+    model="groq:openai/gpt-oss-120b",
     system_prompt=quarter_results_prompt,
     checkpointer=InMemorySaver(),
-    tools=[],
+    tools=[retriever_tool],
     response_format=FinancialInformation
 )
 

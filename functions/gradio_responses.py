@@ -20,11 +20,16 @@ import random
 
 
 from functions import (
-    ticker_admin_tool, _stock_market_data, ticker_info_db, _save_stock_evals, _update_portfolio_info, 
+    ticker_admin_tool, ticker_info_db, _save_stock_evals, _update_portfolio_info, 
     _extract_structured_data
     )
 
+from market_data import _fake_stock_market_data
+
 from vector_store import download_clean_fillings
+
+
+#TODO: ad dprint and yield in llm answers.
 
 
 """
@@ -74,83 +79,80 @@ async def response_quaterly(message, history):
             yield "Data received, now the councel with review the data and come with a veridict, just a moment..."
             time.sleep(2)
 
-            prices_pe_data = _stock_market_data(ticker_symbol)
+            LLM_Answers = []
 
-            response_openai = await openai_finance_boy.ainvoke(
-                {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
-                {"configurable": {"thread_id": "thread_001"}}
-            )
-            data_openai = _extract_structured_data(response_openai["messages"][-1].content)
-            #print(f"OpenAi Says:{data_openai}")
-            yield f"OpenAI recommends: {data_openai["recommendation"]}\n\n"
-            time.sleep(2)
+            prices_pe_data = _fake_stock_market_data(ticker_symbol)
 
+            try: 
+                response_openai = await openai_finance_boy.ainvoke(
+                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"configurable": {"thread_id": "thread_001"}}
+                )
+                data_openai = _extract_structured_data(response_openai["messages"][-1].content)
+                LLM_Answers.append(data_openai)
+                print(f"OpenAi Says:{data_openai}")
+                yield f"OpenAI recommends: {data_openai["recommendation"]}\n\n"
+                time.sleep(2)
+            except Exception as e:
+                print(f"OpenAI failed: {e}")    
 
             #CLAUDE Research
-            response_claude = await anthropic_finance_boy.ainvoke(
-                {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
-                {"configurable": {"thread_id": "thread_001"}}
-            )
-            data_claude = _extract_structured_data(response_claude["messages"][-1].content)
-            #print(f"Claude says: {data_claude}")
-            yield f"Claude recommends: {data_claude["recommendation"]}\n\n"
+            try:
+                response_claude = await anthropic_finance_boy.ainvoke(
+                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"configurable": {"thread_id": "thread_001"}}
+                )
+                data_claude = _extract_structured_data(response_claude["messages"][-1].content)
+                LLM_Answers.append(data_claude)
+                print(f"Claude says: {data_claude}")
+                yield f"Claude recommends: {data_claude["recommendation"]}\n\n"
+            except Exception as e:
+                print(f"Claude failed: {e}") 
 
 
             #Groq Research
-            response_groq = await groq_finance_boy.ainvoke(
-                {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
-                {"configurable": {"thread_id": "thread_001"}}
-            )
-            data_groq = _extract_structured_data(response_groq["messages"][-1].content)
-            #print(f"Google says: {data_claude}")
-            yield f"Groq recommends: {data_claude["recommendation"]}\n\n"
+            try:
+                response_groq = await groq_finance_boy.ainvoke(
+                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"configurable": {"thread_id": "thread_001"}}
+                )
+                data_groq = _extract_structured_data(response_groq["messages"][-1].content)
+                LLM_Answers.append(data_groq)
+                #print(f"Google says: {data_claude}")
+                yield f"Groq recommends: {data_groq["recommendation"]}\n\n"
+            except Exception as e:
+                print(f"Groq failed: {e}") 
 
+            if LLM_Answers:
+                recommendations_list = [answer["recommendation"] for answer in LLM_Answers]
+                reasons_list = [answer["reason"] for answer in LLM_Answers]
 
-            AI1 = data_openai["recommendation"]
-            AI2 = data_claude["recommendation"]
-            AI3 = data_groq["recommendation"]
+                price_list = [answer["higher_stock_price"] for answer in LLM_Answers]
+                price = random.choice(price_list)
 
-            AI1_reason = data_openai["reason"]
-            AI2_reason = data_claude["reason"]
-            AI3_reason = data_groq["reason"]
+                p_e_list = [answer["price_to_earnings"] for answer in LLM_Answers]
+                p_e = random.choice(p_e_list)
 
-            AI1_price = data_openai["higher_stock_price"]
-            AI2_price = data_claude["higher_stock_price"]
-            AI3_price = data_groq["higher_stock_price"]
+                price_des_list = [answer["price_description"] for answer in LLM_Answers]
+                price_description = random.choice(price_des_list)
 
-            AI1_pri_de = data_openai["price_description"]
-            AI2_pri_de = data_claude["price_description"]
-            AI3_pri_de = data_groq["price_description"]
+                # TODO - Use a "smarter" LLM to read all the answers and give a final veridict
+                #for now:
+                selected_reason = random.choice(reasons_list)
 
+                saved_database = _save_stock_evals(ticker_symbol, LLM_Answers, price, price_description,  p_e, selected_reason)
 
-            AI1_pe = data_openai["price_to_earnings"]
-            AI2_pe = data_claude["price_to_earnings"]
-            AI3_pe = data_groq["price_to_earnings"]
+                if recommendations_list.count("Buy") >= 2:
+                    yield f"The councel of LLMS recommends to BUY this stock, the reason:\n\n{selected_reason}\n\n{saved_database}"
 
+                elif recommendations_list.count("Sell") >= 2:
+                    yield f"The councel of LLMS recommends to SELL this stock, the reason:\n{selected_reason}\n\n{saved_database}"
 
-            recommendations_list = [AI1, AI2, AI3]
-            reasons_list = [AI1_reason, AI2_reason, AI3_reason]
-            price_list = [AI1_price, AI2_price, AI3_price]
-            price = random.choice(price_list)
-            p_e_list = [AI1_pe, AI2_pe, AI3_pe]
-            p_e = random.choice(p_e_list)
-            price_des_list = [AI1_pri_de, AI2_pri_de, AI3_pri_de]
-            price_description = random.choice(price_des_list)
-
-            selected_reason = random.choice(reasons_list)
-
-            ticket_symbol = data_openai["stock"]
-
-            saved_database = _save_stock_evals(ticket_symbol, AI1, AI2, AI3, price, price_description,  p_e, selected_reason)
-
-            if recommendations_list.count("Buy") >= 2:
-                yield f"The councel of LLMS recommends to BUY this stock, the reason:\n\n{selected_reason}\n\n{saved_database}"
-
-            elif recommendations_list.count("Sell") >= 2:
-                yield f"The councel of LLMS recommends to SELL this stock, the reason:\n{selected_reason}\n\n{saved_database}"
-
+                else:
+                    yield f"The councel of LLMS recommends to HOLD this stock, the reason:\n{selected_reason}\n\n{saved_database}"
             else:
-                yield f"The councel of LLMS recommends to HOLD this stock, the reason:\n{selected_reason}\n\n{saved_database}"
+                yield "All LLM calls failed. Please try again later."
+                print("all calls to LLMs failed. Try again later")
             
 
    

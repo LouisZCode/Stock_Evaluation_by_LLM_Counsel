@@ -6,5 +6,4 @@ from .agent_tools_cash import add_cash_tool, withdraw_cash_tool, cash_position_c
 from .agent_tools_portfolio import read_my_portfolio, add_to_portfolio, remove_from_portfolio
 from .gradio_responses import response_quaterly, response_my_portfolio, find_opportunities, update_risk_state
 
-
 print("Functions module loaded...")

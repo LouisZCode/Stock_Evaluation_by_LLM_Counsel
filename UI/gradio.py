@@ -13,7 +13,7 @@ with gr.Blocks() as demo:
         
         #Stock Evaluation Tab, saved into stock_evaluation.csv
         with gr.Tab("Counsel of LLMs"):
-            gr.Markdown("# The Councel that will research and categorize a stock for you...") 
+            gr.Markdown("# The Counsel that will research and categorize a stock for you...") 
             gr.ChatInterface(
                 fn=response_quaterly
             )

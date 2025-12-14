@@ -58,7 +58,7 @@ def initialize_databases(
     # Create stock evaluations if doesn't exist
     if not os.path.exists(stock_evals_path):
         new_dataframe = pd.DataFrame(
-            columns=["stock", "LLM_1", "LLM_2", "LLM_3", "price", 
+            columns=["stock", "LLM_1", "LLM_2", "LLM_3", "LLM_4", "LLM_5", "price", 
                     "price_description", "p/e", "one_sentence_reasoning"]
         )
         new_dataframe.to_csv(stock_evals_path, index=False)
