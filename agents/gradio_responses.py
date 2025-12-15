@@ -86,7 +86,7 @@ async def response_quaterly(message, history):
             #OPENAI Research
             try:
                 response_openai = await openai_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
                 log_llm_conversation("OpenAI", response_openai, log_file)
@@ -106,7 +106,7 @@ async def response_quaterly(message, history):
             #CLAUDE Research
             try:
                 response_claude = await anthropic_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
                 log_llm_conversation("Claude", response_claude, log_file)
@@ -125,7 +125,7 @@ async def response_quaterly(message, history):
             #MISTRAL Research
             try:
                 response_mistral = await mistral_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Research {ticker_symbol}, more info: {prices_pe_data}"}]},
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
                 )
                 log_llm_conversation("Mistral", response_mistral, log_file)

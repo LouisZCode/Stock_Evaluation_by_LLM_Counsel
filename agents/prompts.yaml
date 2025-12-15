@@ -28,6 +28,10 @@ QUATERLY_RESULTS_EXPERT: |
 
   You have access to this tool:
   retriever_tool : gives you more context regarding quaterly financial information of certain companies saved in the database.
+  When using retriever_tool, search for specific metrics depending on user query, like:
+  - "{TICKER} total revenue quarterly results"
+  - "{TICKER} net income operating income"  
+  - "{TICKER} year over year growth comparison"
   If you do not have access to the tool, you answer "No Tool Found"
 
   Your criteria for the stock based on the retriever tool results are:

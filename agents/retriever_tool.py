@@ -12,6 +12,9 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from config import EMBEDDING_MODEL, vector_store_path
 
+
+embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
 @tool
 def retriever_tool(query: str) -> str:
     """
@@ -21,8 +24,6 @@ def retriever_tool(query: str) -> str:
     if len(query.split()) <= 5:
         query = f"{query} financial strength and earnings revenue growth"
 
-
-    embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vector_store = FAISS.load_local(
         vector_store_path,
         embedding,
