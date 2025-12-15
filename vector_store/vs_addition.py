@@ -13,9 +13,10 @@ from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 from tqdm import tqdm
-from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path
+from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path, ticker_quarters_path
 
 from datetime import datetime
+import json
 
 set_identity(SEC_IDENTITY)
 
@@ -109,4 +110,33 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
 
     vector_store.save_local(vector_store_path)
     print(f"Success! {len(all_chunks)} chunks saved for {ticker}.")
+
+    # 4. Update ticker_quarters.json with this ticker's quarters
+    quarters_set = set()
+    for chunk in all_chunks:
+        q = chunk.metadata.get("quarter")
+        y = chunk.metadata.get("year")
+        if q and y:
+            quarters_set.add((y, q))  # (2025, "Q3")
+
+    # Sort by year desc, then quarter desc (e.g., Q4 > Q3 > Q2 > Q1)
+    sorted_quarters = sorted(quarters_set, key=lambda x: (x[0], int(x[1][1])), reverse=True)
+
+    # Load existing JSON or create new
+    if ticker_quarters_path.exists():
+        with open(ticker_quarters_path, "r") as f:
+            quarters_data = json.load(f)
+    else:
+        quarters_data = {}
+        os.makedirs(os.path.dirname(ticker_quarters_path), exist_ok=True)
+
+    # Update with this ticker's quarters
+    quarters_data[ticker] = sorted_quarters
+
+    # Save JSON
+    with open(ticker_quarters_path, "w") as f:
+        json.dump(quarters_data, f, indent=2)
+
+    print(f"Updated ticker_quarters.json with {len(sorted_quarters)} quarters for {ticker}.")
+
     return len(all_chunks)

@@ -10,7 +10,7 @@ This project creates a "Council of LLMs" - multiple AI models that independently
 
 - **Multi-LLM Consensus**: Three independent LLMs analyze the same financial data and vote on recommendations (Buy/Hold/Sell)
 - **Real SEC Data**: Downloads and processes 2 years of 10-Q quarterly filings (8 reports) from the SEC EDGAR database
-- **RAG-Powered Analysis**: Uses vector store retrieval to ground LLM responses in real financial documents
+- **RAG-Powered Analysis**: Uses vector store retrieval with metadata filtering and quarter-priority search to ground LLM responses in real financial documents
 - **Portfolio Management**: Track holdings, execute trades, and manage cash with human-in-the-loop approval
 - **Risk-Aligned Recommendations**: Get investment suggestions tailored to your risk tolerance
 
@@ -66,9 +66,10 @@ Stock_Evaluation_by_LLM_Counsel/
 |   |-- gradio.py               # Gradio web app
 |
 |-- market_data/                # Stock price data
+|-- logs/                       # LLM conversation logs (gitignored)
 |-- data/                       # Generated databases (gitignored)
 |   |-- csv/                    # Portfolio, trades, evaluations
-|   |-- vector_store/           # FAISS index
+|   |-- vector_store/           # FAISS index + ticker_quarters.json
 |
 |-- tests/                      # Test files
 |-- main.py                     # Application entry point
@@ -163,14 +164,19 @@ Get personalized recommendations based on your risk tolerance:
 When you query a new stock:
 1. Downloads latest 8 10-Q filings from SEC EDGAR (2 years of quarterly data)
 2. Parses HTML into text chunks (1000 chars, 100 overlap)
-3. Generates embeddings using `all-MiniLM-L6-v2`
-4. Stores in FAISS vector database
+3. Adds metadata: ticker, year, quarter, filing date
+4. Generates embeddings using `all-MiniLM-L6-v2`
+5. Stores in FAISS vector database
+6. Updates `ticker_quarters.json` with available quarters for fast lookup
 
 ### 2. Analysis
 
 Each LLM independently:
 1. Receives the query with stock price context
-2. Searches the vector store for relevant financial data
+2. Searches the vector store with smart retrieval:
+   - 6 chunks guaranteed from latest 3 quarters (2 per quarter)
+   - 9 chunks from semantic search (best matches)
+   - Metadata filtering ensures correct ticker (no cross-contamination)
 3. Analyzes financials, growth, valuation
 4. Returns structured recommendation
 
@@ -225,12 +231,14 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 10})
 
 ## Future Development
 
-- [ ] Improved RAG system with enhanced metadata and retrieval strategies
-- [ ] Smarter consensus logic based on richer LLM responses
+- [x] Metadata filtering to prevent cross-ticker contamination
+- [x] Quarter-priority retrieval (latest 3 quarters guaranteed)
+- [ ] Boilerplate filtering to remove SEC headers/generic text
+- [ ] BM25 hybrid search for better keyword matching
+- [ ] Smarter consensus logic (synthesize LLM responses vs random selection)
 - [ ] Real stock price API integration
 - [ ] Historical performance tracking
 - [ ] Portfolio analytics dashboard
-- [ ] Export reports to PDF
 - [ ] Support for 10-K annual reports
 
 ## License
