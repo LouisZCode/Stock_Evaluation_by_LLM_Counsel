@@ -19,15 +19,22 @@ def retriever_tool(query: str) -> str:
     Search SEC 8-Q quarterly financial filings for a company.
     Query with the ticker symbol to get financial data about earnings, revenue, growth, etc.
     """
+    #Fallback in case the LLM only send the ticker symbol as the query:
     if len(query.split()) <= 5:
         query = f"{query} financial strength and earnings revenue growth"
+
+    # Extract ticker from query (first word, uppercase)
+    ticker = query.split()[0].upper()
 
     vector_store = FAISS.load_local(
         vector_store_path,
         embedding,
         allow_dangerous_deserialization=True
     )
-    retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+    retriever = vector_store.as_retriever(
+        search_kwargs={"k": 5,
+        "filter" : {"ticker" : ticker}}
+    )
     results = retriever.invoke(query)
 
     if not results:

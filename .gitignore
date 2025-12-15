@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# Internal
+todo_list.md
+
 #Data area:
 data/
 

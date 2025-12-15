@@ -71,7 +71,11 @@ async def response_quaterly(message, history):
 
             yield "Getting data for this company from the SEC directly, this will take 1 minute..."
             await asyncio.sleep(1)
-            download_clean_fillings(ticker_symbol)
+            result = download_clean_fillings(ticker_symbol)
+
+            if result is None:
+                yield f"No SEC filings found for '{ticker_symbol}'. This ticker may not be a US-listed company or doesn't have 10-Q filings available."
+                return
 
             yield "Data received, now the counsel will review the data and come with a verdict, just a moment..."
             time.sleep(2)

@@ -35,8 +35,13 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
     embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     
     company = Company(ticker)
-    filings = company.get_filings(form="10-Q").latest(8)
-    
+    filings = company.get_filings(form="10-Q")
+
+    if not filings:
+        print(f"No SEC filings found for ticker '{ticker}'. It may not be a US-listed company.")
+        return None
+
+    filings = filings.latest(8)
     print(f"Found {len(filings)} filings for {ticker}. Processing...")
     all_chunks = [] 
 
@@ -104,3 +109,4 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
 
     vector_store.save_local(vector_store_path)
     print(f"Success! {len(all_chunks)} chunks saved for {ticker}.")
+    return len(all_chunks)
