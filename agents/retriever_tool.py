@@ -6,12 +6,10 @@ Here you find:
 retriever_tool
 """
 
-
 from langchain_core.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from config import EMBEDDING_MODEL, vector_store_path
-
 
 embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
@@ -35,4 +33,14 @@ def retriever_tool(query: str) -> str:
     if not results:
         return "No relevant financial information found for this query."
 
-    return "\n\n".join([doc.page_content for doc in results])
+    # Include metadata with each chunk so LLMs know the source quarter
+    output = []
+    for doc in results:
+        ticker = doc.metadata.get('ticker', 'N/A')
+        year = doc.metadata.get('year', 'N/A')
+        quarter = doc.metadata.get('quarter', 'N/A')
+
+        metadata_str = f"[{ticker} | {quarter} {year}]"
+        output.append(f"{metadata_str}\n{doc.page_content}")
+
+    return "\n\n---\n\n".join(output)

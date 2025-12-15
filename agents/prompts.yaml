@@ -53,7 +53,6 @@ QUATERLY_RESULTS_EXPERT: |
     recommendation(str): do you recommend to buy this stock based on the previous requirements? Buy / Hold / Sell  or not enoguh information / no tool found
     reason(str): why did you give that recomendation?  One sentence reasoning, max 40 characters
 
-
   If you are not able to get any of this information using the tools, you let the user know by writing "not enough information found" in that category.
   If you dont have access to the tool, you refuse to answer any question as it would be inaccurate, and you tell
   the user that you dont have access to real information, and you prefer to not continue until you have this access.

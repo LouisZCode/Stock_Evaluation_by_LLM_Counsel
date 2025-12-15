@@ -4,7 +4,6 @@ All the agents coming from create_agent will be here:
 You can find the following agents:
 checker_agent, openai_finance_boy, anthropic_finance_boy, google_finance_boy,
 simple_explaining_agent, my_portfolio_agent, opportunity_agent
-
 """
 
 from langchain.agents import create_agent
@@ -30,7 +29,7 @@ checker_prompt = prompts["CHECKER"]
 explainer_prompt = prompts["EXPLAINER"]
 OPPORTUNITY_FINDER_PROMPT_TEMPLATE = prompts["PORTFOLIO_RECOMMENDATOR"]
 
-
+# Answer format form the Finance Boys, so it is heterogeneus
 class FinancialInformation(TypedDict):
     stock: str
     financials: str
@@ -42,11 +41,17 @@ class FinancialInformation(TypedDict):
     recommendation: str
     reason: str
 
+"""
+Cleans the Human Query so it gets the Ticker Symbol, and passes it on to the Finance Boys
+"""
 checker_agent = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=checker_prompt,
 )
 
+"""
+### Same Agent, Different LLMS, get Data from Database and gives an answer in RAG
+"""
 openai_finance_boy = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=quarter_results_prompt,
@@ -54,7 +59,6 @@ openai_finance_boy = create_agent(
     tools=[retriever_tool],
     response_format=FinancialInformation
 )
-
 
 anthropic_finance_boy = create_agent(
     model="anthropic:claude-haiku-4-5",
@@ -73,12 +77,18 @@ mistral_finance_boy = create_agent(
     response_format=FinancialInformation
 )
 
+"""
+Takes the information from the 3 LLMS, and explains it to the human.
+"""
 simple_explaining_agent = create_agent(
     model="anthropic:claude-haiku-4-5",
     system_prompt=explainer_prompt,
 )
 
 
+"""
+Adminitrative AI, that can get cash, buy and sell stocks in your name, etc..
+"""
 my_portfolio_agent = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=my_portfolio_prompt,
@@ -99,6 +109,9 @@ my_portfolio_agent = create_agent(
         ])
 
 
+"""
+AI to discuss opportunities based on your risk tolerance.
+"""
 opportunity_agent = create_agent(
     model="anthropic:claude-haiku-4-5",
     system_prompt=explainer_prompt,

@@ -15,6 +15,8 @@ import os
 from tqdm import tqdm
 from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path
 
+from datetime import datetime
+
 set_identity(SEC_IDENTITY)
 
 
@@ -67,6 +69,10 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
             for doc in docs:
                 doc.metadata["ticker"] = ticker
                 doc.metadata["date"] = filing.filing_date
+                # Parse the date to extract quarter and year
+                date_obj = datetime.strptime(str(filing.filing_date), "%Y-%m-%d")
+                doc.metadata["year"] = date_obj.year
+                doc.metadata["quarter"] = f"Q{(date_obj.month - 1) // 3 + 1}"  # Q1, Q2, Q3, Q4
                 doc.metadata["source"] = full_file_path # Point to real file
 
             # E. Split
