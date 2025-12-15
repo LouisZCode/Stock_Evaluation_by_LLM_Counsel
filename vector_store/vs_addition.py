@@ -20,8 +20,6 @@ from datetime import datetime
 set_identity(SEC_IDENTITY)
 
 
-# TODO Add a catch to TypeError: 'NoneType' has no len()  AKA it does not exist
-
 def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
     """
     Gets filings, processes them, and saves to VectorStore.

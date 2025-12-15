@@ -86,9 +86,9 @@ async def response_quaterly(message, history):
             #OPENAI Research
             try:
                 response_openai = await openai_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
-                    {"configurable": {"thread_id": "thread_001"}}
-                )
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]}
+                    )
+                    
                 log_llm_conversation("OpenAI", response_openai, log_file)
                 data_openai = _extract_structured_data(response_openai["messages"][-1].content)
 
@@ -154,8 +154,6 @@ async def response_quaterly(message, history):
                 price_des_list = [answer["price_description"] for answer in LLM_Answers]
                 price_description = random.choice(price_des_list)
 
-                # TODO - Use a "smarter" LLM to read all the answers and give a final veridict
-                #for now:
                 selected_reason = random.choice(reasons_list)
 
                 saved_database = _save_stock_evals(ticker_symbol, recommendations_list, price, price_description,  p_e, selected_reason)
@@ -226,10 +224,6 @@ def response_my_portfolio(message, history, waiting_for_approval):
         return response["messages"][-1].content, False, pd.read_csv(portfolio_path)
 
 
-# TODO grab the data in the interrupt__ value, and use it to selfpopulate correctly aproval_message
-# with the stock, if it is BUY or SELL, quantity and price
-
-    
 async def find_opportunities(message, history, risk_state):
 
     response = await opportunity_agent.ainvoke(

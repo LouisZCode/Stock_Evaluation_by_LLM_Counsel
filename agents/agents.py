@@ -55,7 +55,6 @@ checker_agent = create_agent(
 openai_finance_boy = create_agent(
     model="openai:gpt-5-mini",
     system_prompt=quarter_results_prompt,
-    checkpointer=InMemorySaver(),
     tools=[retriever_tool],
     response_format=FinancialInformation
 )
@@ -63,7 +62,6 @@ openai_finance_boy = create_agent(
 anthropic_finance_boy = create_agent(
     model="anthropic:claude-haiku-4-5",
     system_prompt=quarter_results_prompt,
-    checkpointer=InMemorySaver(),
     tools=[retriever_tool],
     response_format=FinancialInformation
 )
@@ -72,7 +70,6 @@ anthropic_finance_boy = create_agent(
 mistral_finance_boy = create_agent(
     model="mistral-large-2512",
     system_prompt=quarter_results_prompt,
-    checkpointer=InMemorySaver(),
     tools=[retriever_tool],
     response_format=FinancialInformation
 )
