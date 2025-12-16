@@ -9,7 +9,9 @@ retriever_tool
 from langchain_core.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from config import EMBEDDING_MODEL, vector_store_path, ticker_quarters_path
+from langchain_community.retrievers import BM25Retriever
+from langchain_core.documents import Document
+from config import EMBEDDING_MODEL, vector_store_path, ticker_quarters_path, bm25_chunks_path
 import json
 
 embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
@@ -21,6 +23,29 @@ def load_ticker_quarters():
         with open(ticker_quarters_path, "r") as f:
             return json.load(f)
     return {}
+
+
+def get_bm25_results(query: str, ticker: str, k: int = 5) -> list:
+    """Get BM25 keyword search results filtered by ticker."""
+    if not bm25_chunks_path.exists():
+        return []
+
+    with open(bm25_chunks_path, "r") as f:
+        all_chunks = json.load(f)
+
+    # Filter by ticker first (faster search)
+    ticker_chunks = [
+        Document(page_content=c["content"], metadata=c["metadata"])
+        for c in all_chunks if c["metadata"]["ticker"] == ticker
+    ]
+
+    if not ticker_chunks:
+        return []
+
+    # Create BM25 retriever and search
+    bm25 = BM25Retriever.from_documents(ticker_chunks)
+    bm25.k = k
+    return bm25.invoke(query)
 
 
 @tool
@@ -63,7 +88,11 @@ def retriever_tool(query: str) -> str:
     )
     results.extend(general_retriever.invoke(query))
 
-    # Dedupe by content (in case of overlap between quarter-specific and general search)
+    # Part C: Get 5 chunks from BM25 keyword search
+    bm25_results = get_bm25_results(query, ticker, k=5)
+    results.extend(bm25_results)
+
+    # Dedupe by content (in case of overlap between semantic and BM25 search)
     seen = set()
     unique_results = []
     for doc in results:

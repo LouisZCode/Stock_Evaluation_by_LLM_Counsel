@@ -13,7 +13,7 @@ from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 from tqdm import tqdm
-from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path, ticker_quarters_path
+from config import SEC_IDENTITY, EMBEDDING_MODEL, vector_store_path, ticker_quarters_path, bm25_chunks_path
 
 from datetime import datetime
 import json
@@ -138,5 +138,33 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
         json.dump(quarters_data, f, indent=2)
 
     print(f"Updated ticker_quarters.json with {len(sorted_quarters)} quarters for {ticker}.")
+
+    # 5. Save chunks to JSON for BM25 keyword search
+    chunks_for_bm25 = []
+    for chunk in all_chunks:
+        # Convert metadata to JSON-serializable format (date objects -> strings)
+        metadata = dict(chunk.metadata)
+        if "date" in metadata:
+            metadata["date"] = str(metadata["date"])
+        chunks_for_bm25.append({
+            "content": chunk.page_content,
+            "metadata": metadata
+        })
+
+    # Load existing or create new
+    if bm25_chunks_path.exists():
+        with open(bm25_chunks_path, "r") as f:
+            existing = json.load(f)
+        # Filter out old chunks for this ticker (in case of re-ingestion)
+        existing = [c for c in existing if c["metadata"]["ticker"] != ticker]
+        existing.extend(chunks_for_bm25)
+        chunks_for_bm25 = existing
+    else:
+        os.makedirs(os.path.dirname(bm25_chunks_path), exist_ok=True)
+
+    with open(bm25_chunks_path, "w") as f:
+        json.dump(chunks_for_bm25, f)
+
+    print(f"Saved {len(all_chunks)} chunks to bm25_json for {ticker}.")
 
     return len(all_chunks)
