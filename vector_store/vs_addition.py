@@ -82,6 +82,14 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
             # E. Split
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
             file_chunks = text_splitter.split_documents(docs)
+
+            # F. Filter short chunks (removes table fragments, headers, boilerplate)
+            original_count = len(file_chunks)
+            file_chunks = [chunk for chunk in file_chunks if len(chunk.page_content) >= 100]
+            filtered_count = original_count - len(file_chunks)
+            if filtered_count > 0:
+                tqdm.write(f"  Filtered {filtered_count} short chunks (<100 chars)")
+
             all_chunks.extend(file_chunks)
             
             # (Note: We do NOT delete here anymore, we let 'finally' handle it)
