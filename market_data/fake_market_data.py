@@ -1,10 +1,10 @@
 
-
-import random
-
 """
 Fake data while we dont have API Calls, just to test for free data injection into LLMS
 """
+
+import random
+
 def _fake_stock_market_data(ticker_symbol: str) -> str:
     ticket_symbol = ticker_symbol.upper()
     #Sadly, API calls are only 25 per day, so will be using mocking data for this exercise:
