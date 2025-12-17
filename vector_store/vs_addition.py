@@ -20,6 +20,34 @@ import json
 
 set_identity(SEC_IDENTITY)
 
+# Boilerplate patterns to filter out during ingestion (RAG-004)
+# These are SEC form templates with zero financial value
+BOILERPLATE_BLOCKLIST = [
+    "Indicate by check mark",
+    "Large accelerated filer",
+    "Smaller reporting company",
+    "Emerging growth company",
+    "filed all reports required to be filed",
+    "Securities Exchange Act of 1934",
+    "incorporated by reference",
+    "www.sec.gov",
+    "I.R.S. Employer Identification",
+    "internal control over financial reporting",
+    "Principal Accounting Officer",
+    "Principal Financial Officer",
+    "SIGNATURES",
+    "Pursuant to the requirements of",
+    "Exhibit Number",
+    "Exhibit 31",
+    "Exhibit 32",
+]
+
+
+def is_boilerplate(text: str) -> bool:
+    """Check if chunk contains SEC form boilerplate."""
+    text_lower = text.lower()
+    return any(pattern.lower() in text_lower for pattern in BOILERPLATE_BLOCKLIST)
+
 
 def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
     """
@@ -83,12 +111,18 @@ def download_clean_fillings(ticker, keep_files=False): # <--- Added flag
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
             file_chunks = text_splitter.split_documents(docs)
 
-            # F. Filter short chunks (removes table fragments, headers, boilerplate)
+            # F. Filter short chunks (removes table fragments, headers)
             original_count = len(file_chunks)
             file_chunks = [chunk for chunk in file_chunks if len(chunk.page_content) >= 100]
-            filtered_count = original_count - len(file_chunks)
-            if filtered_count > 0:
-                tqdm.write(f"  Filtered {filtered_count} short chunks (<100 chars)")
+            short_filtered = original_count - len(file_chunks)
+
+            # G. Filter boilerplate chunks (RAG-004)
+            pre_boilerplate = len(file_chunks)
+            file_chunks = [chunk for chunk in file_chunks if not is_boilerplate(chunk.page_content)]
+            boilerplate_filtered = pre_boilerplate - len(file_chunks)
+
+            if short_filtered > 0 or boilerplate_filtered > 0:
+                tqdm.write(f"  Filtered: {short_filtered} short, {boilerplate_filtered} boilerplate")
 
             all_chunks.extend(file_chunks)
             

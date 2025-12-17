@@ -107,10 +107,10 @@ def retriever_tool(query: str) -> str:
     latest_quarters = all_quarters[:3]  # Most recent 3 quarters
     older_quarters = all_quarters[3:]   # Everything else
 
-    print(f"\n[DEBUG] Ticker: {ticker}")
-    print(f"[DEBUG] All quarters: {all_quarters}")
-    print(f"[DEBUG] Latest 3: {latest_quarters}")
-    print(f"[DEBUG] Older: {older_quarters}")
+    # print(f"\n[DEBUG] Ticker: {ticker}")
+    # print(f"[DEBUG] All quarters: {all_quarters}")
+    # print(f"[DEBUG] Latest 3: {latest_quarters}")
+    # print(f"[DEBUG] Older: {older_quarters}")
 
     # ============================================================
     # Part A: Latest 3 quarters (semantic + BM25 → 10 unique chunks)
@@ -141,10 +141,10 @@ def retriever_tool(query: str) -> str:
     # ============================================================
     part_b_results = []
 
-    print(f"[DEBUG] Part A results count: {len(part_a_unique)}")
+    # print(f"[DEBUG] Part A results count: {len(part_a_unique)}")
 
     if older_quarters:
-        print(f"[DEBUG] Processing Part B with {len(older_quarters)} older quarters")
+        # print(f"[DEBUG] Processing Part B with {len(older_quarters)} older quarters")
         # Semantic search on older quarters
         # fetch_k: get more candidates before filtering to ensure we find matches
         semantic_older_count = 0
@@ -157,22 +157,22 @@ def retriever_tool(query: str) -> str:
                 }
             )
             results = quarter_retriever.invoke(query)
-            print(f"[DEBUG] Semantic search {quarter} {year}: {len(results)} results")
+            # print(f"[DEBUG] Semantic search {quarter} {year}: {len(results)} results")
             semantic_older_count += len(results)
             part_b_results.extend(results)
 
-        print(f"[DEBUG] Part B semantic total: {semantic_older_count}")
+        # print(f"[DEBUG] Part B semantic total: {semantic_older_count}")
 
         # BM25 search on older quarters (exclude latest 3)
         bm25_older = get_bm25_results(query, ticker, k=10, quarters_filter=latest_quarters, exclude=True)
-        print(f"[DEBUG] Part B BM25 results: {len(bm25_older)}")
+        # print(f"[DEBUG] Part B BM25 results: {len(bm25_older)}")
         part_b_results.extend(bm25_older)
 
-        print(f"[DEBUG] Part B total before dedupe: {len(part_b_results)}")
+        # print(f"[DEBUG] Part B total before dedupe: {len(part_b_results)}")
 
         # Dedupe to 10 unique chunks
         part_b_unique = dedupe_chunks(part_b_results, limit=10)
-        print(f"[DEBUG] Part B after dedupe: {len(part_b_unique)}")
+        # print(f"[DEBUG] Part B after dedupe: {len(part_b_unique)}")
     else:
         part_b_unique = []
 
@@ -180,7 +180,7 @@ def retriever_tool(query: str) -> str:
     # Combine: 50% recent + 50% historical = 20 chunks max
     # ============================================================
     final_results = part_a_unique + part_b_unique
-    print(f"[DEBUG] Final results: {len(final_results)} (Part A: {len(part_a_unique)}, Part B: {len(part_b_unique)})")
+    # print(f"[DEBUG] Final results: {len(final_results)} (Part A: {len(part_a_unique)}, Part B: {len(part_b_unique)})")
 
     if not final_results:
         return "No relevant financial information found for this query."
