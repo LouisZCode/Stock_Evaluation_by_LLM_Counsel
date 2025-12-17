@@ -20,11 +20,11 @@ import random
 
 
 from functions import (
-    ticker_admin_tool, ticker_info_db, _save_stock_evals, _update_portfolio_info, 
+    ticker_admin_tool, ticker_info_db, _save_stock_evals, _update_portfolio_info,
     _extract_structured_data
     )
 
-from market_data import _fake_stock_market_data
+from market_data import _fake_stock_market_data, _stock_market_data
 
 from vector_store import download_clean_fillings
 from logs import start_new_log, log_llm_conversation
@@ -85,10 +85,12 @@ async def response_quaterly(message, history):
 
             LLM_Answers = []
 
-            prices_pe_data = _fake_stock_market_data(ticker_symbol)
+            prices_pe_data = _stock_market_data(ticker_symbol)
 
             #OPENAI Research
             try:
+                yield "OpenAI is thinking..."
+                time.sleep(1)
                 response_openai = await openai_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]}
                     )
@@ -109,6 +111,8 @@ async def response_quaterly(message, history):
 
             #CLAUDE Research
             try:
+                yield "Claude is thinking..."
+                time.sleep(1)
                 response_claude = await anthropic_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}
@@ -128,6 +132,8 @@ async def response_quaterly(message, history):
 
             #MISTRAL Research
             try:
+                yield "Mistral is thinking..."
+                time.sleep(1)
                 response_mistral = await mistral_finance_boy.ainvoke(
                     {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
                     {"configurable": {"thread_id": "thread_001"}}

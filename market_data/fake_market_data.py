@@ -15,8 +15,3 @@ def _fake_stock_market_data(ticker_symbol: str) -> str:
 
     return f"the ticket symbol {ticket_symbol} has a lowest price of {lower_price}, and highest of {higher_price}, with a pe ratio of {pe_ratio} times per sales"
 
-"""
-Data pulled form the stock market based on API Calls
-"""
-def _stock_market_data():
-    pass
