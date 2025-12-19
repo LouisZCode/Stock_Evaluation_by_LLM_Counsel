@@ -48,7 +48,7 @@ def stock_market_data_tool(ticker_symbol : str) -> str:
 
     return _stock_market_data(ticker_symbol)
 
-def _save_stock_evals(ticket_symbol : str, LLM_Answers : list, price : float, price_description : str,  p_e : str, selected_reason : str) -> str:
+def _save_stock_evals(ticket_symbol : str, LLM_Answers : list,  selected_reason : list) -> str:
     """
     Description:
         Saves the stock evals in a csv file
@@ -76,16 +76,12 @@ def _save_stock_evals(ticket_symbol : str, LLM_Answers : list, price : float, pr
         "LLM_3": [LLM_Answers[2] if len(LLM_Answers) > 2 else None],
         "LLM_4": [LLM_Answers[3] if len(LLM_Answers) > 3 else None],
         "LLM_5": [LLM_Answers[4] if len(LLM_Answers) > 4 else None],
-        "price": [price],
-        "price_description": [price_description],
-        "p/e": [p_e],
         "one_sentence_reasoning": [selected_reason]
     })
     df = pd.concat([df, new_row], ignore_index=True)
     df.to_csv(stock_evaluations_path, index=False)
 
     return "Succcessfully saved the stock recommendation into the stock evaluations database"
-
 
 def ticker_admin_tool(ticker_symbol):
     """

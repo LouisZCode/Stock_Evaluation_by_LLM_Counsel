@@ -32,13 +32,15 @@ OPPORTUNITY_FINDER_PROMPT_TEMPLATE = prompts["PORTFOLIO_RECOMMENDATOR"]
 # Answer format form the Finance Boys, so it is heterogeneus
 class FinancialInformation(TypedDict):
     stock: str
-    financials: str
-    growth: str
-    lower_stock_price : str
-    higher_stock_price : str
-    price_description: str
-    price_to_earnings: str
-    recommendation: str
+    revenue: str
+    net_income : str
+    gross_margin : str
+    operational_costs : str
+    cash_flow: str
+    quaterly_growth: str
+    total_assets: str
+    total_debt : str
+    financial_strenght: str
     reason: str
 
 """

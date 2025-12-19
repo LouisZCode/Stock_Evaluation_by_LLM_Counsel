@@ -7,9 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 FINHUB_API_KEY = os.getenv("FINHUB_API_KEY")
-ticker = "TSLA"
-
 finnhub_client = finnhub.Client(api_key=FINHUB_API_KEY)
+
+
+ticker = "TSLA"
 
 print(f"Ticker: {ticker}")
 print("This is the current price:")

@@ -40,6 +40,7 @@ BOILERPLATE_BLOCKLIST = [
     "Exhibit Number",
     "Exhibit 31",
     "Exhibit 32",
+    "forward-looking statements",
 ]
 
 

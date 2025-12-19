@@ -24,8 +24,6 @@ from functions import (
     _extract_structured_data
     )
 
-from market_data import _fake_stock_market_data, _stock_market_data
-
 from vector_store import download_clean_fillings
 from logs import start_new_log, log_llm_conversation
 
@@ -85,23 +83,21 @@ async def response_quaterly(message, history):
 
             LLM_Answers = []
 
-            prices_pe_data = _stock_market_data(ticker_symbol)
-
             #OPENAI Research
             try:
                 yield "OpenAI is thinking..."
                 time.sleep(1)
                 response_openai = await openai_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]}
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]}
                     )
                     
                 log_llm_conversation("OpenAI", response_openai, log_file)
                 data_openai = _extract_structured_data(response_openai["messages"][-1].content)
 
-                if data_openai and "recommendation" in data_openai:
+                if data_openai and "financial_strenght" in data_openai:
                     LLM_Answers.append(data_openai)
                     print(f"OpenAI says: {data_openai}")
-                    yield f"OpenAI recommends: {data_openai['recommendation']}\n\n"
+                    yield f"OpenAI says: {data_openai['financial_strenght']}\n\n"
                 else:
                     print(f"OpenAI returned invalid data: {data_openai}")
 
@@ -114,16 +110,15 @@ async def response_quaterly(message, history):
                 yield "Claude is thinking..."
                 time.sleep(1)
                 response_claude = await anthropic_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
-                    {"configurable": {"thread_id": "thread_001"}}
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]},
                 )
                 log_llm_conversation("Claude", response_claude, log_file)
                 data_claude = _extract_structured_data(response_claude["messages"][-1].content)
 
-                if data_claude and "recommendation" in data_claude:
+                if data_claude and "financial_strenght" in data_claude:
                     LLM_Answers.append(data_claude)
                     print(f"Claude says: {data_claude}")
-                    yield f"Claude recommends: {data_claude['recommendation']}\n\n"
+                    yield f"Claude says: {data_claude['financial_strenght']}\n\n"
                 else:
                     print(f"Claude returned invalid data: {data_claude}")
 
@@ -135,16 +130,15 @@ async def response_quaterly(message, history):
                 yield "Mistral is thinking..."
                 time.sleep(1)
                 response_mistral = await mistral_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: total revenue, net income, operating income, and year-over-year growth, more info: {prices_pe_data}"}]},
-                    {"configurable": {"thread_id": "thread_001"}}
+                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]},
                 )
                 log_llm_conversation("Mistral", response_mistral, log_file)
                 data_mistral = _extract_structured_data(response_mistral["messages"][-1].content)
 
-                if data_mistral and "recommendation" in data_mistral:
+                if data_mistral and "financial_strenght" in data_mistral:
                     LLM_Answers.append(data_mistral)
                     print(f"Mistral says: {data_mistral}")
-                    yield f"Mistral recommends: {data_mistral['recommendation']}\n\n"
+                    yield f"Mistral recommends: {data_mistral['financial_strenght']}\n\n"
                 else:
                     print(f"Mistral returned invalid data: {data_mistral}")
 
@@ -152,30 +146,12 @@ async def response_quaterly(message, history):
                 print(f"Mistral failed: {e}") 
 
             if LLM_Answers:
-                recommendations_list = [answer["recommendation"] for answer in LLM_Answers]
-                reasons_list = [answer["reason"] for answer in LLM_Answers]
+                recommendations_list = [answer["financial_strenght"] for answer in LLM_Answers]
+                selected_reason = [answer["reason"] for answer in LLM_Answers]
+                _save_stock_evals(ticker_symbol, recommendations_list, selected_reason)
 
-                price_list = [answer["higher_stock_price"] for answer in LLM_Answers]
-                price = random.choice(price_list)
+                yield f"Analysis complete. Results saved to database.\n\n{LLM_Answers}"
 
-                p_e_list = [answer["price_to_earnings"] for answer in LLM_Answers]
-                p_e = random.choice(p_e_list)
-
-                price_des_list = [answer["price_description"] for answer in LLM_Answers]
-                price_description = random.choice(price_des_list)
-
-                selected_reason = random.choice(reasons_list)
-
-                saved_database = _save_stock_evals(ticker_symbol, recommendations_list, price, price_description,  p_e, selected_reason)
-
-                if recommendations_list.count("Buy") >= 2:
-                    yield f"The councel of LLMS recommends to BUY this stock, the reason:\n\n{selected_reason}\n\n{saved_database}"
-
-                elif recommendations_list.count("Sell") >= 2:
-                    yield f"The councel of LLMS recommends to SELL this stock, the reason:\n{selected_reason}\n\n{saved_database}"
-
-                else:
-                    yield f"The councel of LLMS recommends to HOLD this stock, the reason:\n{selected_reason}\n\n{saved_database}"
             else:
                 yield "All LLM calls failed. Please try again later."
                 print("all calls to LLMs failed. Try again later")
