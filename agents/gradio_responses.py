@@ -34,22 +34,24 @@ Agent that reads the vector stores, and gives you info about the quaterly inform
 async def response_quaterly(message, history):
 
     check_ticker = checker_agent.invoke(
-        {"messages": [{"role": "user", "content": message}]}
+        {"messages": [{"role": "user", "content": message}]},
+        {"configurable" : {"thread_id" : "002"}}
     )
 
     print("before IF statements:")
     print(check_ticker["messages"][-1].content)
     print()
 
-    if check_ticker["messages"][-1].content == 'No clear symbol or company mentioned, could you try again please?':
+    msg = check_ticker["messages"][-1].content
+    ticker_symbol = msg.split()[-1]
+
+    if not check_ticker["messages"][-1].content == f"counsel will research the ticker {ticker_symbol}":
         print(check_ticker["messages"][-1].content)
-        yield "No clear symbol or company mentioned, could you try again please?"
-        return 
+        yield check_ticker["messages"][-1].content
+        return
     
     else:
-        ticker_symbol = check_ticker["messages"][-1].content
-        yield f"I have found the ticker symbol {ticker_symbol} in the users query, thinking..."
-        time.sleep(1)
+        
 
         if ticker_admin_tool(ticker_symbol):
             yield "The councel already had researched this Ticker, gathering the info form the database..."
@@ -57,8 +59,9 @@ async def response_quaterly(message, history):
             #agent that explains the info:
             ticker_info = ticker_info_db(ticker_symbol)
 
-            explainer_agent = simple_explaining_agent.invoke(
-            {"messages": [{"role": "user", "content": f"{ticker_info}"}]}
+            explainer_agent = checker_agent.invoke(
+            {"messages": [{"role": "user", "content": f"{ticker_info}"}]},
+            {"configurable" : {"thread_id" : "002"}}
             )
             explainer_agent["messages"][-1].content
 
@@ -67,7 +70,7 @@ async def response_quaterly(message, history):
         
         else:
 
-            yield "Getting data for this company from the SEC directly, this will take 1 minute..."
+            yield "The Counsel is gathering data of this company from the SEC directly, this will take 1 minute..."
             await asyncio.sleep(1)
             result = download_clean_fillings(ticker_symbol)
 
@@ -150,7 +153,12 @@ async def response_quaterly(message, history):
                 selected_reason = [answer["reason"] for answer in LLM_Answers]
                 _save_stock_evals(ticker_symbol, recommendations_list, selected_reason)
 
-                yield f"Analysis complete. Results saved to database.\n\n{LLM_Answers}"
+                check_ticker = checker_agent.invoke(
+                    {"messages": [{"role": "user", "content": f"[FROM THE COUNSEL]: Here are the financial findings for {ticker_symbol}:\n{LLM_Answers}"}]},
+                    {"configurable" : {"thread_id" : "002"}}
+                )
+                yield check_ticker["messages"][-1].content
+                return 
 
             else:
                 yield "All LLM calls failed. Please try again later."

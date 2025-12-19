@@ -26,6 +26,7 @@ prompts = load_prompts()
 quarter_results_prompt = prompts["QUATERLY_RESULTS_EXPERT"]
 my_portfolio_prompt = prompts["MY_PORTFOLIO_EXPERT"]
 checker_prompt = prompts["CHECKER"]
+counsel_voice = prompts["THE_COUNSEL_VOICE"]
 explainer_prompt = prompts["EXPLAINER"]
 OPPORTUNITY_FINDER_PROMPT_TEMPLATE = prompts["PORTFOLIO_RECOMMENDATOR"]
 
@@ -48,7 +49,8 @@ Cleans the Human Query so it gets the Ticker Symbol, and passes it on to the Fin
 """
 checker_agent = create_agent(
     model="openai:gpt-5-mini",
-    system_prompt=checker_prompt,
+    system_prompt=counsel_voice,
+    checkpointer=InMemorySaver()
 )
 
 """
