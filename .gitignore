@@ -13,7 +13,7 @@ data/
 
 # Logs
 *.log
-logs/
+logs/conversations/
 
 # Environment variables / secrets
 .env
