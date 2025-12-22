@@ -30,19 +30,27 @@ counsel_voice = prompts["THE_COUNSEL_VOICE"]
 explainer_prompt = prompts["EXPLAINER"]
 OPPORTUNITY_FINDER_PROMPT_TEMPLATE = prompts["PORTFOLIO_RECOMMENDATOR"]
 
-# Answer format form the Finance Boys, so it is heterogeneus
+# Answer format from the Finance Boys, so it is heterogeneous
 class FinancialInformation(TypedDict):
     stock: str
     revenue: str
-    net_income : str
-    gross_margin : str
-    operational_costs : str
+    revenue_reason: str
+    net_income: str
+    net_income_reason: str
+    gross_margin: str
+    gross_margin_reason: str
+    operational_costs: str
+    operational_costs_reason: str
     cash_flow: str
+    cash_flow_reason: str
     quaterly_growth: str
+    quaterly_growth_reason: str
     total_assets: str
-    total_debt : str
+    total_assets_reason: str
+    total_debt: str
+    total_debt_reason: str
     financial_strenght: str
-    reason: str
+    overall_summary: str
 
 """
 Cleans the Human Query so it gets the Ticker Symbol, and passes it on to the Finance Boys

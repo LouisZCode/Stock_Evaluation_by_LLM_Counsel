@@ -45,14 +45,13 @@ async def response_quaterly(message, history):
     msg = check_ticker["messages"][-1].content
     ticker_symbol = msg.split()[-1]
 
-    if not check_ticker["messages"][-1].content == f"counsel will research the ticker {ticker_symbol}":
+    if not check_ticker["messages"][-1].content == f"We will research the ticker {ticker_symbol}":
         print(check_ticker["messages"][-1].content)
         yield check_ticker["messages"][-1].content
         return
     
     else:
         
-
         if ticker_admin_tool(ticker_symbol):
             yield "The councel already had researched this Ticker, gathering the info form the database..."
             time.sleep(2)
@@ -69,7 +68,8 @@ async def response_quaterly(message, history):
             return
         
         else:
-
+            yield f"We will research the ticker {ticker_symbol}"
+            await asyncio.sleep(2)
             yield "The Counsel is gathering data of this company from the SEC directly, this will take 1 minute..."
             await asyncio.sleep(1)
             result = download_clean_fillings(ticker_symbol)
@@ -150,7 +150,7 @@ async def response_quaterly(message, history):
 
             if LLM_Answers:
                 recommendations_list = [answer["financial_strenght"] for answer in LLM_Answers]
-                selected_reason = [answer["reason"] for answer in LLM_Answers]
+                selected_reason = [answer["overall_summary"] for answer in LLM_Answers]
                 _save_stock_evals(ticker_symbol, recommendations_list, selected_reason)
 
                 check_ticker = checker_agent.invoke(
