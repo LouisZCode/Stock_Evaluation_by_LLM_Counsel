@@ -7,7 +7,7 @@ response_quaterly, response_my_portfolio, find_opportunities, update_risk_state
 
 
 from .agents import (
-    checker_agent, simple_explaining_agent, anthropic_finance_boy, mistral_finance_boy,
+    checker_agent, anthropic_finance_boy, mistral_finance_boy,
 openai_finance_boy, opportunity_agent, my_portfolio_agent
 )
 
@@ -25,7 +25,8 @@ from functions import (
     )
 
 from vector_store import download_clean_fillings
-from logs import start_new_log, log_llm_conversation
+from logs import start_new_log, log_llm_conversation, log_debate_check
+from functions import calculate_agreement
 
 
 """
@@ -146,7 +147,16 @@ async def response_quaterly(message, history):
                     print(f"Mistral returned invalid data: {data_mistral}")
 
             except Exception as e:
-                print(f"Mistral failed: {e}") 
+                print(f"Mistral failed: {e}")
+
+            # Check agreement between LLMs and log debate status
+            if len(LLM_Answers) >= 2:
+                agreement_info = calculate_agreement(LLM_Answers)
+                log_debate_check(agreement_info, log_file)
+
+                # TODO: If debate_level != 'none', trigger run_debate()
+                if agreement_info['debate_level'] != 'none':
+                    yield f"Debate triggered: {agreement_info['debate_level'].upper()} (spread: {agreement_info['score_spread']})\n\n"
 
             if LLM_Answers:
                 recommendations_list = [answer["financial_strenght"] for answer in LLM_Answers]

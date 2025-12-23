@@ -27,6 +27,7 @@ quarter_results_prompt = prompts["QUATERLY_RESULTS_EXPERT"]
 my_portfolio_prompt = prompts["MY_PORTFOLIO_EXPERT"]
 checker_prompt = prompts["CHECKER"]
 counsel_voice = prompts["THE_COUNSEL_VOICE"]
+debater_prompt = prompts["THE_DEBATER"]
 explainer_prompt = prompts["EXPLAINER"]
 OPPORTUNITY_FINDER_PROMPT_TEMPLATE = prompts["PORTFOLIO_RECOMMENDATOR"]
 
@@ -78,7 +79,6 @@ anthropic_finance_boy = create_agent(
     response_format=FinancialInformation
 )
 
-
 mistral_finance_boy = create_agent(
     model="mistral-large-2512",
     system_prompt=quarter_results_prompt,
@@ -86,12 +86,28 @@ mistral_finance_boy = create_agent(
     response_format=FinancialInformation
 )
 
+
+
 """
-Takes the information from the 3 LLMS, and explains it to the human.
+LLMs that take thee information from the finance boys, and if needed, talk about it with each other to reach a financial "truth". The Agora
 """
-simple_explaining_agent = create_agent(
+
+openai_socrates = create_agent(
+    model="openai:gpt-5-mini",
+    system_prompt=debater_prompt,
+    checkpointer=InMemorySaver()
+)
+
+anthropic_pythagoras = create_agent(
     model="anthropic:claude-haiku-4-5",
-    system_prompt=explainer_prompt,
+    system_prompt=debater_prompt,
+    checkpointer=InMemorySaver()
+)
+
+mistral_diogenes = create_agent(
+    model="mistral-large-2512",
+    system_prompt=debater_prompt,
+    checkpointer=InMemorySaver()
 )
 
 
@@ -116,6 +132,8 @@ my_portfolio_agent = create_agent(
                 }
             )
         ])
+
+
 
 
 """

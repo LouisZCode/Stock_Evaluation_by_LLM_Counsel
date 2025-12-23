@@ -1,6 +1,6 @@
 
 
-from .agents import openai_finance_boy, mistral_finance_boy, anthropic_finance_boy, checker_agent, simple_explaining_agent, my_portfolio_agent, opportunity_agent
+from .agents import openai_finance_boy, mistral_finance_boy, anthropic_finance_boy, checker_agent, my_portfolio_agent, opportunity_agent
 from .gradio_responses import response_quaterly,response_my_portfolio, _update_portfolio_info, find_opportunities, update_risk_state
 
 print("Agents module loaded...")

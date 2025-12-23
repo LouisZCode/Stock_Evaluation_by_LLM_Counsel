@@ -2,7 +2,7 @@
 Logger for capturing full LLM conversations including tool calls and responses.
 
 You can find:
-start_new_log, log_llm_conversation
+start_new_log, log_llm_conversation, log_debate_check
 """
 
 import os
@@ -109,5 +109,48 @@ def log_llm_conversation(llm_name: str, response: dict, log_file: str = None):
             else:
                 # Fallback for other message types
                 f.write(f"[{msg_type}]\n{getattr(msg, 'content', str(msg))}\n\n")
+
+        f.write(f"\n")
+
+
+def log_debate_check(agreement_info: dict, log_file: str = None):
+    """
+    Logs the debate check results after analyzing LLM agreement.
+
+    Args:
+        agreement_info: Output from calculate_agreement()
+        log_file: Optional specific log file path. Uses current session log if not provided.
+    """
+    filepath = log_file or _current_log_file
+
+    if not filepath:
+        print(f"Warning: No log file set. Call start_new_log() first.")
+        return
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"  DEBATE CHECK\n")
+        f.write(f"{'='*60}\n\n")
+
+        f.write(f"Scores: {agreement_info.get('scores', [])}\n")
+        f.write(f"Score Spread: {agreement_info.get('score_spread', 'N/A')}\n")
+        f.write(f"Debate Level: {agreement_info.get('debate_level', 'N/A').upper()}\n")
+
+        disagreements = agreement_info.get('metric_disagreements', [])
+        if disagreements:
+            f.write(f"Metric Disagreements: {', '.join(disagreements)}\n")
+        else:
+            f.write(f"Metric Disagreements: None\n")
+
+        f.write(f"Missing Data: {agreement_info.get('missing_data', False)}\n")
+
+        # Summary line
+        level = agreement_info.get('debate_level', 'none')
+        if level == 'none':
+            f.write(f"\n→ No debate needed, LLMs are aligned.\n")
+        elif level == 'small':
+            f.write(f"\n→ Small debate triggered (1-2 rounds).\n")
+        else:
+            f.write(f"\n→ Large debate triggered (3 rounds).\n")
 
         f.write(f"\n")
