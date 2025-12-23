@@ -4,6 +4,7 @@ Handles agreement calculation and debate orchestration.
 """
 
 import re
+import copy
 from typing import Optional
 
 RATING_MAP = {
@@ -106,4 +107,175 @@ def calculate_agreement(analyses: list[dict]) -> dict:
         'scores': scores,
         'metric_disagreements': metric_disagreements,
         'missing_data': missing_data
+    }
+
+
+def get_metric_comparison(analyses: list[dict]) -> dict:
+    """
+    Generate comparison table of all metrics across N LLMs.
+
+    Args:
+        analyses: List of FinancialInformation dicts from LLMs
+
+    Returns:
+        {
+            'rows': [
+                {'metric': 'revenue', 'ratings': ['Excellent', 'Excellent', 'Excellent'], 'spread': 0},
+                {'metric': 'cash_flow', 'ratings': [None, 'Good', 'Good'], 'spread': 0},
+                ...
+            ],
+            'missing_counts': [3, 0, 2],  # per LLM
+            'llm_count': 3
+        }
+    """
+    rows = []
+    missing_counts = [0] * len(analyses)
+
+    for metric in METRICS:
+        ratings = []
+        numeric_ratings = []
+
+        for i, analysis in enumerate(analyses):
+            raw_rating = analysis.get(metric, '')
+
+            # Check if missing
+            if not raw_rating or "not enough information" in raw_rating.lower():
+                ratings.append(None)
+                missing_counts[i] += 1
+            else:
+                # Extract first word (Excellent, Good, etc.)
+                first_word = raw_rating.split()[0] if raw_rating else ''
+                ratings.append(first_word)
+                numeric = parse_metric_rating(raw_rating)
+                if numeric is not None:
+                    numeric_ratings.append(numeric)
+
+        # Calculate spread (None if less than 2 valid ratings)
+        if len(numeric_ratings) >= 2:
+            spread = max(numeric_ratings) - min(numeric_ratings)
+        else:
+            spread = None
+
+        rows.append({
+            'metric': metric,
+            'ratings': ratings,
+            'spread': spread
+        })
+
+    return {
+        'rows': rows,
+        'missing_counts': missing_counts,
+        'llm_count': len(analyses)
+    }
+
+
+def fill_missing_with_consensus(analyses: list[dict]) -> list[dict]:
+    """
+    Fill missing metrics when other LLMs have consensus.
+
+    Rules:
+    - Only fill if exactly 1 LLM is missing for that metric
+    - Remaining LLMs must all agree on the rating
+    - Returns new list (doesn't mutate original)
+
+    Args:
+        analyses: List of FinancialInformation dicts from LLMs
+
+    Returns:
+        New list with missing values filled where consensus exists
+    """
+    filled = copy.deepcopy(analyses)
+    llm_count = len(analyses)
+
+    for metric in METRICS:
+        ratings = []
+        missing_indices = []
+
+        # Collect ratings and track missing
+        for i, analysis in enumerate(analyses):
+            raw_rating = analysis.get(metric, '')
+            if not raw_rating or "not enough information" in raw_rating.lower():
+                missing_indices.append(i)
+                ratings.append(None)
+            else:
+                first_word = raw_rating.split()[0].capitalize() if raw_rating else None
+                ratings.append(first_word)
+
+        # Only fill if exactly 1 missing
+        if len(missing_indices) != 1:
+            continue
+
+        # Check if remaining ratings all agree
+        non_missing = [r for r in ratings if r is not None]
+        if len(set(non_missing)) == 1:
+            # All agree - fill the missing one
+            consensus_value = non_missing[0]
+            missing_idx = missing_indices[0]
+            filled[missing_idx][metric] = consensus_value
+            # Also fill the reason field
+            reason_key = f"{metric}_reason"
+            filled[missing_idx][reason_key] = f"Filled by consensus ({consensus_value})"
+
+    return filled
+
+
+def recalculate_strength_scores(analyses: list[dict]) -> list[int]:
+    """
+    Recalculate X/8 scores by counting Good/Excellent ratings.
+
+    Args:
+        analyses: List of FinancialInformation dicts (after filling)
+
+    Returns:
+        List of scores [6, 7, 6] for each LLM
+    """
+    scores = []
+
+    for analysis in analyses:
+        positive_count = 0
+
+        for metric in METRICS:
+            rating_str = analysis.get(metric, '')
+
+            # Skip missing
+            if not rating_str or "not enough information" in rating_str.lower():
+                continue
+
+            # Check if Good or Excellent
+            first_word = rating_str.lower().split()[0] if rating_str else ''
+            if first_word in ('good', 'excellent'):
+                positive_count += 1
+
+        scores.append(positive_count)
+
+    return scores
+
+
+def calculate_agreement_from_scores(scores: list[int]) -> dict:
+    """
+    Calculate agreement info from a list of scores.
+
+    Args:
+        scores: List of recalculated scores [6, 7, 6]
+
+    Returns:
+        Same format as calculate_agreement()
+    """
+    if len(scores) >= 2:
+        score_spread = max(scores) - min(scores)
+    else:
+        score_spread = 0
+
+    # Determine debate level
+    if score_spread < 2:
+        debate_level = 'none'
+    elif score_spread == 2:
+        debate_level = 'small'
+    else:
+        debate_level = 'large'
+
+    return {
+        'debate_level': debate_level,
+        'score_spread': score_spread,
+        'scores': scores
     }

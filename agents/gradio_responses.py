@@ -26,7 +26,10 @@ from functions import (
 
 from vector_store import download_clean_fillings
 from logs import start_new_log, log_llm_conversation, log_debate_check
-from functions import calculate_agreement
+from functions import (
+    calculate_agreement, get_metric_comparison, fill_missing_with_consensus,
+    recalculate_strength_scores, calculate_agreement_from_scores
+)
 
 
 """
@@ -151,12 +154,29 @@ async def response_quaterly(message, history):
 
             # Check agreement between LLMs and log debate status
             if len(LLM_Answers) >= 2:
-                agreement_info = calculate_agreement(LLM_Answers)
-                log_debate_check(agreement_info, log_file)
+                # Original agreement and comparison (from LLM responses)
+                original_agreement = calculate_agreement(LLM_Answers)
+                original_comparison = get_metric_comparison(LLM_Answers)
 
-                # TODO: If debate_level != 'none', trigger run_debate()
-                if agreement_info['debate_level'] != 'none':
-                    yield f"Debate triggered: {agreement_info['debate_level'].upper()} (spread: {agreement_info['score_spread']})\n\n"
+                # Fill missing values where consensus exists
+                filled_analyses = fill_missing_with_consensus(LLM_Answers)
+
+                # Recalculate scores after filling
+                recalc_scores = recalculate_strength_scores(filled_analyses)
+                recalc_agreement = calculate_agreement_from_scores(recalc_scores)
+
+                # Get comparison table after filling
+                filled_comparison = get_metric_comparison(filled_analyses)
+
+                # Log both original and recalculated with both comparison tables
+                log_debate_check(original_agreement, recalc_agreement, original_comparison, filled_comparison, log_file)
+
+                # Use RECALCULATED for debate decision
+                if recalc_agreement['debate_level'] != 'none':
+                    yield f"Debate triggered: {recalc_agreement['debate_level'].upper()} (spread: {recalc_agreement['score_spread']})\n\n. We are discussing the details of the company to get to the truth..."
+
+                # Use filled analyses for the rest of the flow
+                LLM_Answers = filled_analyses
 
             if LLM_Answers:
                 recommendations_list = [answer["financial_strenght"] for answer in LLM_Answers]
