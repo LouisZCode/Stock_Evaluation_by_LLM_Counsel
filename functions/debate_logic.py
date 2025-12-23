@@ -15,6 +15,11 @@ RATING_MAP = {
     "horrible": 1
 }
 
+# Tier definitions for harmonization logic
+POSITIVE_TIER = {'excellent', 'good'}   # Bullish ratings
+NEGATIVE_TIER = {'bad', 'horrible'}     # Bearish ratings
+NEUTRAL_TIER = {'neutral'}              # Ambiguous - always triggers debate
+
 METRICS = [
     'revenue', 'net_income', 'gross_margin', 'operational_costs',
     'cash_flow', 'quaterly_growth', 'total_assets', 'total_debt'
@@ -278,4 +283,137 @@ def calculate_agreement_from_scores(scores: list[int]) -> dict:
         'debate_level': debate_level,
         'score_spread': score_spread,
         'scores': scores
+    }
+
+
+def _get_tier(rating: str) -> str:
+    """Get the tier for a rating."""
+    rating_lower = rating.lower()
+    if rating_lower in POSITIVE_TIER:
+        return 'positive'
+    elif rating_lower in NEGATIVE_TIER:
+        return 'negative'
+    elif rating_lower in NEUTRAL_TIER:
+        return 'neutral'
+    return 'unknown'
+
+
+def _get_majority(ratings: list[str]) -> str:
+    """Get the majority rating from a list."""
+    from collections import Counter
+    # Count occurrences, return most common
+    counts = Counter(r.lower() for r in ratings if r)
+    if counts:
+        most_common = counts.most_common(1)[0][0]
+        return most_common.capitalize()
+    return ratings[0] if ratings else None
+
+
+def harmonize_and_check_debates(analyses: list[dict]) -> dict:
+    """
+    For each metric:
+    1. Get ratings (skip missing)
+    2. Determine tiers present
+    3. If all same tier → harmonize to majority
+    4. If Neutral OR cross-tier → flag for debate
+
+    Args:
+        analyses: List of FinancialInformation dicts (after fill_missing)
+
+    Returns:
+        {
+            'harmonized_analyses': [...],
+            'metrics_to_debate': ['cash_flow', 'total_debt'],
+            'harmonization_log': [
+                {'metric': 'revenue', 'action': 'harmonized', 'original': ['E','E','G'], 'result': 'Excellent'},
+                {'metric': 'cash_flow', 'action': 'debate', 'reason': 'neutral_present', 'ratings': ['G','N','G']},
+            ]
+        }
+    """
+    harmonized = copy.deepcopy(analyses)
+    metrics_to_debate = []
+    harmonization_log = []
+
+    for metric in METRICS:
+        # Collect ratings for this metric
+        ratings = []
+        has_missing = False
+
+        for analysis in analyses:
+            raw_rating = analysis.get(metric, '')
+            if not raw_rating or "not enough information" in raw_rating.lower():
+                has_missing = True
+                ratings.append(None)
+            else:
+                first_word = raw_rating.split()[0].capitalize() if raw_rating else None
+                ratings.append(first_word)
+
+        # Skip if has missing - already handled by fill_missing
+        valid_ratings = [r for r in ratings if r is not None]
+        if len(valid_ratings) < 2:
+            harmonization_log.append({
+                'metric': metric,
+                'action': 'skipped',
+                'reason': 'insufficient_data',
+                'ratings': ratings
+            })
+            continue
+
+        # Get tiers for each rating
+        tiers = set(_get_tier(r) for r in valid_ratings)
+
+        # Check for debate triggers
+        if 'neutral' in tiers:
+            # Neutral present - needs debate
+            metrics_to_debate.append(metric)
+            harmonization_log.append({
+                'metric': metric,
+                'action': 'debate',
+                'reason': 'neutral_present',
+                'ratings': ratings
+            })
+        elif 'positive' in tiers and 'negative' in tiers:
+            # Cross-tier conflict - needs debate
+            metrics_to_debate.append(metric)
+            harmonization_log.append({
+                'metric': metric,
+                'action': 'debate',
+                'reason': 'cross_tier_conflict',
+                'ratings': ratings
+            })
+        else:
+            # All same tier - harmonize to majority
+            majority = _get_majority(valid_ratings)
+            original_ratings = ratings.copy()
+
+            # Check if already harmonized (all same)
+            if len(set(r.lower() for r in valid_ratings)) == 1:
+                harmonization_log.append({
+                    'metric': metric,
+                    'action': 'already_aligned',
+                    'ratings': ratings,
+                    'result': majority
+                })
+            else:
+                # Apply harmonization
+                for i, analysis in enumerate(harmonized):
+                    if ratings[i] is not None:
+                        harmonized[i][metric] = majority
+                        # Update reason to note harmonization
+                        reason_key = f"{metric}_reason"
+                        original_reason = analysis.get(reason_key, '')
+                        if original_reason and 'Harmonized' not in original_reason:
+                            harmonized[i][reason_key] = f"{original_reason} [Harmonized to {majority}]"
+
+                harmonization_log.append({
+                    'metric': metric,
+                    'action': 'harmonized',
+                    'original': original_ratings,
+                    'result': majority
+                })
+
+    return {
+        'harmonized_analyses': harmonized,
+        'metrics_to_debate': metrics_to_debate,
+        'harmonization_log': harmonization_log
     }

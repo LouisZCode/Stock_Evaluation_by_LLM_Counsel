@@ -7,7 +7,8 @@ from .agent_tools_portfolio import read_my_portfolio, add_to_portfolio, remove_f
 from .debate_logic import (
     calculate_agreement, parse_strength_score, parse_metric_rating,
     get_metric_comparison, fill_missing_with_consensus,
-    recalculate_strength_scores, calculate_agreement_from_scores
+    recalculate_strength_scores, calculate_agreement_from_scores,
+    harmonize_and_check_debates
 )
 
 print("Functions module loaded...")

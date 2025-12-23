@@ -2,7 +2,7 @@
 Logger for capturing full LLM conversations including tool calls and responses.
 
 You can find:
-start_new_log, log_llm_conversation, log_debate_check
+start_new_log, log_llm_conversation, log_debate_check, log_llm_timing
 """
 
 import os
@@ -36,6 +36,24 @@ def start_new_log(ticker: str) -> str:
         f.write(f"{'='*60}\n\n")
 
     return filepath
+
+
+def log_llm_timing(elapsed_time: float, log_file: str = None):
+    """
+    Logs the time taken for all LLM calls to complete.
+
+    Args:
+        elapsed_time: Time in seconds
+        log_file: Optional specific log file path. Uses current session log if not provided.
+    """
+    filepath = log_file or _current_log_file
+
+    if not filepath:
+        print(f"Warning: No log file set. Call start_new_log() first.")
+        return
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"LLM Response Time: {elapsed_time:.2f}s (parallel)\n\n")
 
 
 def log_llm_conversation(llm_name: str, response: dict, log_file: str = None):
@@ -196,3 +214,77 @@ def log_debate_check(original_agreement: dict, recalc_agreement: dict = None,
             f.write(f"\n→ Final decision: LARGE debate (3 rounds)\n")
 
         f.write(f"\n")
+
+
+def log_harmonization(harmonize_result: dict, final_scores: list[int] = None, log_file: str = None):
+    """
+    Logs harmonization results and debate decisions.
+
+    Args:
+        harmonize_result: Output from harmonize_and_check_debates()
+        final_scores: Optional recalculated scores after harmonization
+        log_file: Optional specific log file path. Uses current session log if not provided.
+    """
+    filepath = log_file or _current_log_file
+
+    if not filepath:
+        print(f"Warning: No log file set. Call start_new_log() first.")
+        return
+
+    harmonization_log = harmonize_result.get('harmonization_log', [])
+    metrics_to_debate = harmonize_result.get('metrics_to_debate', [])
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"  HARMONIZATION & DEBATE CHECK\n")
+        f.write(f"{'='*60}\n\n")
+
+        # Group log entries by action
+        harmonized = [e for e in harmonization_log if e['action'] == 'harmonized']
+        aligned = [e for e in harmonization_log if e['action'] == 'already_aligned']
+        debates = [e for e in harmonization_log if e['action'] == 'debate']
+        skipped = [e for e in harmonization_log if e['action'] == 'skipped']
+
+        # Harmonized metrics
+        if harmonized or aligned:
+            f.write("Harmonized Metrics:\n")
+            for entry in harmonized:
+                original = entry.get('original', [])
+                original_str = ', '.join(str(r) for r in original)
+                f.write(f"  {entry['metric']:20}: [{original_str}] → {entry['result']}\n")
+            for entry in aligned:
+                ratings = entry.get('ratings', [])
+                ratings_str = ', '.join(str(r) for r in ratings)
+                f.write(f"  {entry['metric']:20}: [{ratings_str}] → {entry['result']} (no change)\n")
+            f.write("\n")
+
+        # Metrics flagged for debate
+        if debates:
+            f.write("Metrics Flagged for Debate:\n")
+            for entry in debates:
+                ratings = entry.get('ratings', [])
+                ratings_str = ', '.join(str(r) if r else 'missing' for r in ratings)
+                reason = entry.get('reason', 'unknown')
+                f.write(f"  {entry['metric']:20}: [{ratings_str}] → {reason}\n")
+            f.write("\n")
+
+        # Skipped metrics (insufficient data)
+        if skipped:
+            f.write("Skipped (insufficient data):\n")
+            for entry in skipped:
+                ratings = entry.get('ratings', [])
+                ratings_str = ', '.join(str(r) if r else 'missing' for r in ratings)
+                f.write(f"  {entry['metric']:20}: [{ratings_str}]\n")
+            f.write("\n")
+
+        # Final scores if provided
+        if final_scores:
+            f.write(f"Final Scores: {final_scores}\n\n")
+
+        # Summary
+        if metrics_to_debate:
+            f.write(f"→ Debate needed on {len(metrics_to_debate)} metrics: {', '.join(metrics_to_debate)}\n")
+        else:
+            f.write(f"→ No debate needed (all metrics aligned or harmonized)\n")
+
+        f.write("\n")

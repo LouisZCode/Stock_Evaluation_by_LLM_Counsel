@@ -25,10 +25,10 @@ from functions import (
     )
 
 from vector_store import download_clean_fillings
-from logs import start_new_log, log_llm_conversation, log_debate_check
+from logs import start_new_log, log_llm_conversation, log_debate_check, log_llm_timing, log_harmonization
 from functions import (
     calculate_agreement, get_metric_comparison, fill_missing_with_consensus,
-    recalculate_strength_scores, calculate_agreement_from_scores
+    recalculate_strength_scores, calculate_agreement_from_scores, harmonize_and_check_debates
 )
 
 
@@ -107,7 +107,13 @@ async def response_quaterly(message, history):
             ]
 
             # Run all LLM calls in parallel
+            start_time = time.time()
             responses = await asyncio.gather(*tasks, return_exceptions=True)
+            elapsed_time = time.time() - start_time
+
+            # Log timing
+            print(f"All LLMs responded in {elapsed_time:.2f}s (parallel)")
+            log_llm_timing(elapsed_time, log_file)
 
             # Process responses after all complete
             LLM_Answers = []
@@ -140,22 +146,29 @@ async def response_quaterly(message, history):
                 # Fill missing values where consensus exists
                 filled_analyses = fill_missing_with_consensus(LLM_Answers)
 
-                # Recalculate scores after filling
-                recalc_scores = recalculate_strength_scores(filled_analyses)
-                recalc_agreement = calculate_agreement_from_scores(recalc_scores)
+                # Harmonize same-tier ratings and identify metrics that need debate
+                harmonize_result = harmonize_and_check_debates(filled_analyses)
+                harmonized_analyses = harmonize_result['harmonized_analyses']
+                metrics_to_debate = harmonize_result['metrics_to_debate']
 
-                # Get comparison table after filling
+                # Recalculate scores after harmonization
+                recalc_scores = recalculate_strength_scores(harmonized_analyses)
+
+                # Get comparison table after filling (for original log)
                 filled_comparison = get_metric_comparison(filled_analyses)
 
-                # Log both original and recalculated with both comparison tables
-                log_debate_check(original_agreement, recalc_agreement, original_comparison, filled_comparison, log_file)
+                # Log original debate check (for comparison)
+                log_debate_check(original_agreement, None, original_comparison, filled_comparison, log_file)
 
-                # Use RECALCULATED for debate decision
-                if recalc_agreement['debate_level'] != 'none':
-                    yield f"Debate triggered: {recalc_agreement['debate_level'].upper()} (spread: {recalc_agreement['score_spread']})\n\n. We are discussing the details of the company to get to the truth..."
+                # Log harmonization results with new format
+                log_harmonization(harmonize_result, recalc_scores, log_file)
 
-                # Use filled analyses for the rest of the flow
-                LLM_Answers = filled_analyses
+                # Use tier-based decision for debate
+                if metrics_to_debate:
+                    yield f"Debate triggered on: {', '.join(metrics_to_debate)}\n\n"
+
+                # Use harmonized analyses for the rest of the flow
+                LLM_Answers = harmonized_analyses
 
             if LLM_Answers:
                 recommendations_list = [answer["financial_strenght"] for answer in LLM_Answers]
