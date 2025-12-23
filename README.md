@@ -58,6 +58,7 @@ Stock_Evaluation_by_LLM_Counsel/
 |   |-- agent_tools_portfolio.py # Portfolio tools
 |   |-- stock_data_management.py # Stock evaluation DB
 |   |-- initialize_databases.py  # CSV database setup
+|   |-- debate_logic.py         # Agreement calculation, consensus filling
 |
 |-- vector_store/               # SEC data processing
 |   |-- vs_addition.py          # Download & embed SEC filings
@@ -67,6 +68,8 @@ Stock_Evaluation_by_LLM_Counsel/
 |
 |-- market_data/                # Stock price data
 |-- logs/                       # LLM conversation logs (gitignored)
+|   |-- llm_logger.py           # Logging utilities
+|   |-- conversations/          # Per-ticker log files with chunk & debate info
 |-- data/                       # Generated databases (gitignored)
 |   |-- csv/                    # Portfolio, trades, evaluations
 |   |-- vector_store/           # FAISS index + ticker_quarters.json
@@ -172,20 +175,34 @@ When you query a new stock:
 ### 2. Analysis
 
 Each LLM independently:
-1. Receives the query with stock price context
+1. Receives the query with stock ticker
 2. Searches the vector store with smart retrieval:
    - 6 chunks guaranteed from latest 3 quarters (2 per quarter)
    - 9 chunks from semantic search (best matches)
    - Metadata filtering ensures correct ticker (no cross-contamination)
-3. Analyzes financials, growth, valuation
-4. Returns structured recommendation
+3. Returns structured analysis with 8 metrics:
+   - Revenue, Net Income, Gross Margin, Operational Costs
+   - Cash Flow, Quarterly Growth, Total Assets, Total Debt
+4. Each metric rated: Excellent / Good / Neutral / Bad / Horrible
+5. Per-metric reasoning with specific data points
+6. Overall financial strength score (X/8)
 
-### 3. Consensus
+### 3. Consensus & Agreement
 
-The system aggregates responses:
-- 2+ "Buy" votes -> **BUY** recommendation
-- 2+ "Sell" votes -> **SELL** recommendation
-- Otherwise -> **HOLD** recommendation
+The system calculates agreement between LLMs:
+
+1. **Original Scores**: Extract X/8 from each LLM response
+2. **Fill Missing**: If 1 LLM lacks data but others agree, fill with consensus
+3. **Recalculate**: Count Good/Excellent ratings after filling
+4. **Compare Spread**: `max(scores) - min(scores)`
+
+| Spread | Debate Level | Action |
+|--------|--------------|--------|
+| 0-1 | None | LLMs aligned, no debate needed |
+| 2 | Small | Minor disagreement, 1-2 debate rounds |
+| 3+ | Large | Significant disagreement, 3 debate rounds |
+
+All results logged with before/after comparison tables for transparency.
 
 ## Configuration
 
@@ -233,9 +250,13 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 10})
 
 - [x] Metadata filtering to prevent cross-ticker contamination
 - [x] Quarter-priority retrieval (latest 3 quarters guaranteed)
-- [ ] Boilerplate filtering to remove SEC headers/generic text
-- [ ] BM25 hybrid search for better keyword matching
-- [ ] Smarter consensus logic (synthesize LLM responses vs random selection)
+- [x] Boilerplate filtering to remove SEC headers/generic text
+- [x] BM25 hybrid search for better keyword matching
+- [x] Smarter consensus logic with agreement scoring and recalculation
+- [x] Parallel LLM calls (3x faster with asyncio.gather)
+- [x] Detailed logging with chunk visibility and debate tracking
+- [ ] LLM debate rounds when significant disagreement detected
+- [ ] Exportable analysis reports (PDF/Markdown)
 - [ ] Real stock price API integration
 - [ ] Historical performance tracking
 - [ ] Portfolio analytics dashboard

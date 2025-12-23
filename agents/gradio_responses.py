@@ -88,69 +88,48 @@ async def response_quaterly(message, history):
             # Start logging for this research session
             log_file = start_new_log(ticker_symbol)
 
+            yield "The Counsel is deliberating on the financial data..."
+
+            # LLM configuration for parallel calls
+            LLM_CONFIGS = [
+                ("OpenAI", openai_finance_boy),
+                ("Claude", anthropic_finance_boy),
+                ("Mistral", mistral_finance_boy),
+            ]
+
+            # Build the prompt once (same for all LLMs)
+            prompt = f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"
+
+            # Create tasks for parallel execution
+            tasks = [
+                llm.ainvoke({"messages": [{"role": "user", "content": prompt}]})
+                for name, llm in LLM_CONFIGS
+            ]
+
+            # Run all LLM calls in parallel
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Process responses after all complete
             LLM_Answers = []
 
-            #OPENAI Research
-            try:
-                yield "OpenAI is thinking..."
-                time.sleep(1)
-                response_openai = await openai_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]}
-                    )
-                    
-                log_llm_conversation("OpenAI", response_openai, log_file)
-                data_openai = _extract_structured_data(response_openai["messages"][-1].content)
+            for (name, _), response in zip(LLM_CONFIGS, responses):
+                # Check if this LLM failed
+                if isinstance(response, Exception):
+                    print(f"{name} failed: {response}")
+                    continue
 
-                if data_openai and "financial_strenght" in data_openai:
-                    LLM_Answers.append(data_openai)
-                    print(f"OpenAI says: {data_openai}")
-                    yield f"OpenAI says: {data_openai['financial_strenght']}\n\n"
+                # Log the conversation
+                log_llm_conversation(name, response, log_file)
+
+                # Extract structured data
+                data = _extract_structured_data(response["messages"][-1].content)
+
+                if data and "financial_strenght" in data:
+                    LLM_Answers.append(data)
+                    print(f"{name} says: {data}")
+                    yield f"{name} says: {data['financial_strenght']}\n\n"
                 else:
-                    print(f"OpenAI returned invalid data: {data_openai}")
-
-                time.sleep(2)
-            except Exception as e:
-                print(f"OpenAI failed: {e}")
-
-            #CLAUDE Research
-            try:
-                yield "Claude is thinking..."
-                time.sleep(1)
-                response_claude = await anthropic_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]},
-                )
-                log_llm_conversation("Claude", response_claude, log_file)
-                data_claude = _extract_structured_data(response_claude["messages"][-1].content)
-
-                if data_claude and "financial_strenght" in data_claude:
-                    LLM_Answers.append(data_claude)
-                    print(f"Claude says: {data_claude}")
-                    yield f"Claude says: {data_claude['financial_strenght']}\n\n"
-                else:
-                    print(f"Claude returned invalid data: {data_claude}")
-
-            except Exception as e:
-                print(f"Claude failed: {e}")
-
-            #MISTRAL Research
-            try:
-                yield "Mistral is thinking..."
-                time.sleep(1)
-                response_mistral = await mistral_finance_boy.ainvoke(
-                    {"messages": [{"role": "user", "content": f"Analyze {ticker_symbol}'s quarterly financial performance. Look for: revenue, net income, gross margin, operational costs, cash flow, quarterly growth, total assets, and total debt"}]},
-                )
-                log_llm_conversation("Mistral", response_mistral, log_file)
-                data_mistral = _extract_structured_data(response_mistral["messages"][-1].content)
-
-                if data_mistral and "financial_strenght" in data_mistral:
-                    LLM_Answers.append(data_mistral)
-                    print(f"Mistral says: {data_mistral}")
-                    yield f"Mistral recommends: {data_mistral['financial_strenght']}\n\n"
-                else:
-                    print(f"Mistral returned invalid data: {data_mistral}")
-
-            except Exception as e:
-                print(f"Mistral failed: {e}")
+                    print(f"{name} returned invalid data: {data}")
 
             # Check agreement between LLMs and log debate status
             if len(LLM_Answers) >= 2:
