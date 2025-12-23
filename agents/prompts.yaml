@@ -58,7 +58,7 @@ QUATERLY_RESULTS_EXPERT: |
     total_assets_reason(str): Brief reasoning for the total assets rating with specific data (e.g., "Total assets $128.6B, cash position $41.6B")
     total_debt(str): Total borrowed money including short-term and long-term debt, is it Excellent / Good / Neutral / Bad / Horrible? (high debt is normally BAD)
     total_debt_reason(str): Brief reasoning for the total debt rating with specific data (e.g., "Total debt $7.5B, manageable vs $41B cash")
-    financial_strenght(str): how many good points does this company have? Answer only with the score (e.g., "7/8", "4/8", "0/8") or "not enough information" if data is missing
+    financial_strenght(str): how many good points does this company have? (neutral = 0) Answer only with the score (e.g., "7/8", "4/8", "0/8") or "not enough information" if data is missing
     overall_summary(str): 1-3 sentence summary of the overall financial picture, highlighting the most important findings
 
   If you are not able to get any of this information using the tools, you let the user know by writing "not enough information found" in that category.

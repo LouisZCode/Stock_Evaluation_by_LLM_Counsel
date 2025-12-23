@@ -362,6 +362,17 @@ def harmonize_and_check_debates(analyses: list[dict]) -> dict:
         # Get tiers for each rating
         tiers = set(_get_tier(r) for r in valid_ratings)
 
+        # Check for unanimous agreement FIRST (even if all Neutral)
+        if len(set(r.lower() for r in valid_ratings)) == 1:
+            # All same rating - no debate needed
+            harmonization_log.append({
+                'metric': metric,
+                'action': 'already_aligned',
+                'ratings': ratings,
+                'result': valid_ratings[0].capitalize()
+            })
+            continue
+
         # Check for debate triggers
         if 'neutral' in tiers:
             # Neutral present - needs debate
@@ -382,35 +393,26 @@ def harmonize_and_check_debates(analyses: list[dict]) -> dict:
                 'ratings': ratings
             })
         else:
-            # All same tier - harmonize to majority
+            # All same tier but different values - harmonize to majority
             majority = _get_majority(valid_ratings)
             original_ratings = ratings.copy()
 
-            # Check if already harmonized (all same)
-            if len(set(r.lower() for r in valid_ratings)) == 1:
-                harmonization_log.append({
-                    'metric': metric,
-                    'action': 'already_aligned',
-                    'ratings': ratings,
-                    'result': majority
-                })
-            else:
-                # Apply harmonization
-                for i, analysis in enumerate(harmonized):
-                    if ratings[i] is not None:
-                        harmonized[i][metric] = majority
-                        # Update reason to note harmonization
-                        reason_key = f"{metric}_reason"
-                        original_reason = analysis.get(reason_key, '')
-                        if original_reason and 'Harmonized' not in original_reason:
-                            harmonized[i][reason_key] = f"{original_reason} [Harmonized to {majority}]"
+            # Apply harmonization
+            for i, analysis in enumerate(harmonized):
+                if ratings[i] is not None:
+                    harmonized[i][metric] = majority
+                    # Update reason to note harmonization
+                    reason_key = f"{metric}_reason"
+                    original_reason = analysis.get(reason_key, '')
+                    if original_reason and 'Harmonized' not in original_reason:
+                        harmonized[i][reason_key] = f"{original_reason} [Harmonized to {majority}]"
 
-                harmonization_log.append({
-                    'metric': metric,
-                    'action': 'harmonized',
-                    'original': original_ratings,
-                    'result': majority
-                })
+            harmonization_log.append({
+                'metric': metric,
+                'action': 'harmonized',
+                'original': original_ratings,
+                'result': majority
+            })
 
     return {
         'harmonized_analyses': harmonized,
