@@ -25,7 +25,8 @@ from functions import (
     )
 
 from vector_store import download_clean_fillings
-from logs import start_new_log, log_llm_conversation, log_debate_check, log_llm_timing, log_harmonization
+from logs import start_new_log, log_llm_conversation, log_debate_check, log_llm_timing, log_harmonization, log_debate_transcript
+from .debate_orchestrator import run_debate
 from functions import (
     calculate_agreement, get_metric_comparison, fill_missing_with_consensus,
     recalculate_strength_scores, calculate_agreement_from_scores, harmonize_and_check_debates
@@ -166,8 +167,38 @@ async def response_quaterly(message, history):
                 # Use tier-based decision for debate
                 if metrics_to_debate:
                     yield f"Debate triggered on: {', '.join(metrics_to_debate)}\n\n"
+                    yield "The counsel is debating the disputed metrics...\n\n"
 
-                # Use harmonized analyses for the rest of the flow
+                    # Run the multi-round debate
+                    debate_result = await run_debate(
+                        ticker=ticker_symbol,
+                        metrics_to_debate=metrics_to_debate,
+                        original_analyses=filled_analyses,
+                        max_rounds=3
+                    )
+
+                    # Apply debate results to harmonized analyses
+                    for metric, final_rating in debate_result['debate_results'].items():
+                        if final_rating != "COMPLEX":
+                            for analysis in harmonized_analyses:
+                                analysis[metric] = final_rating
+
+                    # Log the debate transcript
+                    log_debate_transcript(debate_result, log_file)
+
+                    # Recalculate scores after debate
+                    recalc_scores = recalculate_strength_scores(harmonized_analyses)
+
+                    # Show debate results to user
+                    debate_summary = []
+                    for metric, rating in debate_result['debate_results'].items():
+                        if rating == "COMPLEX":
+                            debate_summary.append(f"{metric}: ⚠️ No consensus (requires review)")
+                        else:
+                            debate_summary.append(f"{metric}: {rating}")
+                    yield f"Debate concluded: {', '.join(debate_summary)}\n\n"
+
+                # Use harmonized (and debated) analyses for the rest of the flow
                 LLM_Answers = harmonized_analyses
 
             if LLM_Answers:

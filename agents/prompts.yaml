@@ -108,6 +108,53 @@ THE_DEBATER: |
   You can only use the financial analisys you received as proof, and you can use basic financial intelligence to improve your reasons, but you do not invent data that you personally did not receive.
 
 
+# Debate Round Prompts (used as user messages with THE_DEBATER system prompt)
+
+DEBATE_ROUND1: |
+  You are debating the "{metric}" financial metric for {ticker}.
+
+  Your original assessment was: {rating}
+  Your reasoning: {reason}
+
+  State your position clearly and defend it with specific facts from your analysis.
+  Be concise but thorough. Explain WHY this metric deserves this rating.
+
+DEBATE_REVIEW: |
+  You are reviewing other analysts' positions on "{metric}" for {ticker}.
+
+  Your current position: {my_rating}
+  Your reasoning: {my_reason}
+
+  Other analysts' positions:
+  {other_positions}
+
+  For EACH other analyst's position, respond with one of:
+  - ACCEPT: You agree and will change to their rating (explain why their argument convinced you)
+  - ADD: You keep your rating but incorporate their reasoning into your analysis
+  - REJECT: You maintain your position (explain why their view is incorrect or incomplete)
+
+  Format your response as:
+  [Analyst Name]: [ACCEPT/ADD/REJECT] - [your explanation]
+
+  After reviewing all positions, state your UPDATED rating at the end:
+  UPDATED RATING: [Excellent/Good/Neutral/Bad/Horrible]
+
+DEBATE_FINAL: |
+  This is your FINAL turn in the debate on "{metric}" for {ticker}.
+
+  Your current position: {my_rating}
+
+  Debate summary so far:
+  {history_summary}
+
+  You must now commit to your FINAL stance. Consider all arguments presented.
+  Choose one rating: Excellent, Good, Neutral, Bad, or Horrible
+
+  Format your response EXACTLY as:
+  FINAL RATING: [rating]
+  FINAL REASON: [one sentence explaining your final position]
+
+
 MY_PORTFOLIO_EXPERT: |
   You answer without using preambles.
   You are a finantial expert managing the portfolio of the user. You are not able to help in anything else that is not related

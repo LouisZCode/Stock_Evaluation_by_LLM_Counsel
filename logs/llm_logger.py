@@ -288,3 +288,89 @@ def log_harmonization(harmonize_result: dict, final_scores: list[int] = None, lo
             f.write(f"→ No debate needed (all metrics aligned or harmonized)\n")
 
         f.write("\n")
+
+
+def log_debate_transcript(debate_result: dict, log_file: str = None):
+    """
+    Log the full debate transcript.
+
+    Args:
+        debate_result: Output from run_debate() containing transcript, results, and changes
+        log_file: Optional specific log file path. Uses current session log if not provided.
+    """
+    filepath = log_file or _current_log_file
+
+    if not filepath:
+        print(f"Warning: No log file set. Call start_new_log() first.")
+        return
+
+    transcript = debate_result.get('transcript', [])
+    debate_results = debate_result.get('debate_results', {})
+    changes = debate_result.get('position_changes', [])
+
+    # Get unique metrics from transcript
+    metrics = []
+    seen = set()
+    for t in transcript:
+        if t['metric'] not in seen:
+            metrics.append(t['metric'])
+            seen.add(t['metric'])
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"  DEBATE TRANSCRIPT\n")
+        f.write(f"{'='*60}\n\n")
+
+        # Log each metric's debate
+        for metric in metrics:
+            f.write(f"--- {metric.upper()} ---\n\n")
+
+            # Get entries for this metric
+            metric_entries = [t for t in transcript if t['metric'] == metric]
+
+            # Group by round
+            rounds = {}
+            for entry in metric_entries:
+                round_key = entry['round']
+                if round_key not in rounds:
+                    rounds[round_key] = []
+                rounds[round_key].append(entry)
+
+            # Write each round
+            for round_key in sorted(rounds.keys(), key=lambda x: (0, x) if isinstance(x, int) else (1, x)):
+                round_label = f"Round {round_key}" if isinstance(round_key, int) else "FINAL"
+                f.write(f"[{round_label}]\n")
+
+                for entry in rounds[round_key]:
+                    f.write(f"  {entry['llm']}:\n")
+                    # Truncate long content for readability
+                    content = entry['content']
+                    if len(content) > 500:
+                        content = content[:500] + "..."
+                    # Indent content
+                    indented = '\n    '.join(content.split('\n'))
+                    f.write(f"    {indented}\n\n")
+
+            # Final result for this metric
+            final_rating = debate_results.get(metric, 'Unknown')
+            if final_rating == "COMPLEX":
+                f.write(f"→ RESULT: COMPLEX (no majority - requires user attention)\n\n")
+            else:
+                f.write(f"→ CONSENSUS: {final_rating}\n\n")
+
+        # Position changes summary
+        if changes:
+            f.write(f"{'-'*40}\n")
+            f.write("Position Changes During Debate:\n")
+            for change in changes:
+                f.write(f"  {change['llm']}: {change['metric']} ({change['from']} → {change['to']})\n")
+            f.write("\n")
+
+        # Overall summary
+        f.write(f"{'-'*40}\n")
+        f.write("Debate Results Summary:\n")
+        for metric, rating in debate_results.items():
+            status = "⚠️ COMPLEX" if rating == "COMPLEX" else f"✓ {rating}"
+            f.write(f"  {metric}: {status}\n")
+
+        f.write("\n")
