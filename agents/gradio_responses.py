@@ -25,11 +25,10 @@ from functions import (
     )
 
 from vector_store import download_clean_fillings
-from logs import start_new_log, log_llm_conversation, log_debate_check, log_llm_timing, log_harmonization, log_debate_transcript
+from logs import start_new_log, log_llm_conversation, log_llm_timing, log_harmonization, log_debate_transcript
 from .debate_orchestrator import run_debate
 from functions import (
-    calculate_agreement, get_metric_comparison, fill_missing_with_consensus,
-    recalculate_strength_scores, calculate_agreement_from_scores, harmonize_and_check_debates
+    fill_missing_with_consensus, recalculate_strength_scores, harmonize_and_check_debates
 )
 
 
@@ -140,10 +139,6 @@ async def response_quaterly(message, history):
 
             # Check agreement between LLMs and log debate status
             if len(LLM_Answers) >= 2:
-                # Original agreement and comparison (from LLM responses)
-                original_agreement = calculate_agreement(LLM_Answers)
-                original_comparison = get_metric_comparison(LLM_Answers)
-
                 # Fill missing values where consensus exists
                 filled_analyses = fill_missing_with_consensus(LLM_Answers)
 
@@ -155,13 +150,7 @@ async def response_quaterly(message, history):
                 # Recalculate scores after harmonization
                 recalc_scores = recalculate_strength_scores(harmonized_analyses)
 
-                # Get comparison table after filling (for original log)
-                filled_comparison = get_metric_comparison(filled_analyses)
-
-                # Log original debate check (for comparison)
-                log_debate_check(original_agreement, None, original_comparison, filled_comparison, log_file)
-
-                # Log harmonization results with new format
+                # Log harmonization results
                 log_harmonization(harmonize_result, recalc_scores, log_file)
 
                 # Use tier-based decision for debate
