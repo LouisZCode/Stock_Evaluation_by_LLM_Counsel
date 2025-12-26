@@ -334,30 +334,49 @@ def log_final_report(
             elif rating_lower == 'complex' or rating == 'COMPLEX':
                 unresolved.append(f"{metric}")
 
-        # Calculate verdict
+        # Calculate score (-16 to +16)
+        score = _calculate_score(all_ratings)
+
+        # Determine verdict label from score
+        if score <= -11:
+            verdict = "Extremely Risky"
+        elif score <= -4:
+            verdict = "Risky"
+        elif score <= 3:
+            verdict = "Neutral"
+        elif score <= 10:
+            verdict = "Safe"
+        else:
+            verdict = "Extremely Safe"
+
+        # Calculate counts for display
         num_experts = len(original_analyses)
         total_metrics = len(all_ratings)
-        num_strong = len(strengths)
+        num_positive = len(strengths)
+        num_neutral = len(watch)
         num_negative = len(concerns)
         num_debates = len(complex_entries)
         num_resolved = num_debates - len(unresolved)
 
-        # Determine overall verdict
-        if num_strong >= 6:
-            verdict = "Strong"
-        elif num_strong >= 4:
-            verdict = "Neutral"
-        else:
-            verdict = "Weak"
-
         # Write summary
         f.write(f"{ticker} Financial Summary ({num_experts} Experts, {total_metrics} Metrics)\n")
         f.write(f"{'─'*45}\n")
-        verdict_line = f"Verdict: {verdict} ({num_strong}/{total_metrics} positive"
+
+        # Score line with sign
+        score_display = f"+{score}" if score > 0 else str(score)
+        f.write(f"Score: {score_display}/16 → {verdict}\n\n")
+
+        # Build metrics breakdown - only show counts that exist
+        breakdown_parts = []
+        if num_positive > 0:
+            breakdown_parts.append(f"{num_positive} positive")
+        if num_neutral > 0:
+            breakdown_parts.append(f"{num_neutral} neutral")
         if num_negative > 0:
-            verdict_line += f", {num_negative}/{total_metrics} negative"
-        verdict_line += ")\n\n"
-        f.write(verdict_line)
+            breakdown_parts.append(f"{num_negative} negative")
+
+        if breakdown_parts:
+            f.write(f"Breakdown: {', '.join(breakdown_parts)}\n")
 
         if strengths:
             f.write(f"Strengths: {', '.join(strengths)}\n")
@@ -404,6 +423,41 @@ def _find_matching_reason(metric: str, final_rating: str, analyses: list) -> str
             return analysis[reason_key]
 
     return ""
+
+
+def _calculate_score(ratings: dict) -> int:
+    """
+    Calculate financial score from -16 to +16.
+
+    Scoring:
+        Excellent: +2
+        Good: +1
+        Neutral: 0
+        Bad: -1
+        Horrible: -2
+        COMPLEX: 0 (unresolved)
+
+    Args:
+        ratings: Dict of {metric: rating}
+
+    Returns:
+        Score from -16 to +16
+    """
+    score_map = {
+        'excellent': 2,
+        'good': 1,
+        'neutral': 0,
+        'bad': -1,
+        'horrible': -2,
+        'complex': 0,  # Unresolved counts as neutral
+    }
+
+    total = 0
+    for metric, rating in ratings.items():
+        rating_lower = rating.lower() if rating else ""
+        total += score_map.get(rating_lower, 0)
+
+    return total
 
 
 def log_debate_transcript(debate_result: dict, log_file: str = None):
