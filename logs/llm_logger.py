@@ -205,6 +205,207 @@ def log_harmonization(harmonize_result: dict, final_scores: list[int] = None, lo
         f.write("\n")
 
 
+def log_final_report(
+    ticker: str,
+    harmonize_result: dict,
+    original_analyses: list,
+    debate_result: dict = None,
+    log_file: str = None
+):
+    """
+    Log the final metrics report with clear and complex metrics.
+
+    Args:
+        ticker: Stock symbol
+        harmonize_result: Output from harmonize_and_check_debates()
+        original_analyses: List of 3 LLM analyses (filled_analyses) with reasons
+        debate_result: Optional output from run_debate() if debate occurred
+        log_file: Optional specific log file path
+    """
+    filepath = log_file or _current_log_file
+
+    if not filepath:
+        print("Warning: No log file set. Call start_new_log() first.")
+        return
+
+    harmonization_log = harmonize_result.get('harmonization_log', [])
+    metrics_to_debate = harmonize_result.get('metrics_to_debate', [])
+
+    # Separate clear metrics from complex metrics
+    clear_entries = [e for e in harmonization_log if e['action'] in ('already_aligned', 'harmonized')]
+    complex_entries = [e for e in harmonization_log if e['action'] == 'debate']
+
+    # Expert names (generic to support future LLM changes)
+    expert_names = ["Expert 1", "Expert 2", "Expert 3"]
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"  FINAL METRICS REPORT\n")
+        f.write(f"{'='*60}\n\n")
+
+        # --- CLEAR METRICS ---
+        if clear_entries:
+            f.write(f"CLEAR METRICS ({len(clear_entries)}/8)\n")
+            f.write(f"{'─'*20}\n")
+
+            for entry in clear_entries:
+                metric = entry['metric']
+                final_rating = entry['result']
+
+                # Find first LLM whose rating matches final rating
+                reason = _find_matching_reason(metric, final_rating, original_analyses)
+
+                f.write(f"  ✓ {metric}: {final_rating}\n")
+                if reason:
+                    # Truncate reason if too long
+                    reason_short = reason[:250] + "..." if len(reason) > 250 else reason
+                    f.write(f"    {reason_short}\n")
+                f.write("\n")
+
+        # --- COMPLEX METRICS ---
+        if complex_entries or (debate_result and debate_result.get('debate_results')):
+            debate_results = debate_result.get('debate_results', {}) if debate_result else {}
+            complex_count = len(debate_results) if debate_results else len(complex_entries)
+
+            f.write(f"COMPLEX METRICS ({complex_count}/8)\n")
+            f.write(f"{'─'*20}\n")
+
+            for entry in complex_entries:
+                metric = entry['metric']
+                original_ratings = entry.get('ratings', [])
+
+                # Format original ratings with expert names
+                ratings_str = ", ".join(
+                    f"{expert_names[i]}:{r}" if i < len(expert_names) else str(r)
+                    for i, r in enumerate(original_ratings)
+                )
+
+                f.write(f"  ⚡ {metric}\n")
+                f.write(f"    Before: [{ratings_str}]\n")
+
+                # Add debate result if available
+                if debate_results and metric in debate_results:
+                    final_rating = debate_results[metric]
+                    if final_rating == "COMPLEX":
+                        f.write(f"    Debate: 3 rounds (no majority)\n")
+                        f.write(f"    Result: ⚠️ COMPLEX (requires user review)\n")
+                    else:
+                        f.write(f"    Debate: 3 rounds\n")
+                        f.write(f"    Result: {final_rating} (consensus)\n")
+                        # Add reason from matching LLM
+                        reason = _find_matching_reason(metric, final_rating, original_analyses)
+                        if reason:
+                            reason_short = reason[:250] + "..." if len(reason) > 250 else reason
+                            f.write(f"    {reason_short}\n")
+                else:
+                    f.write(f"    Debate: pending\n")
+
+                f.write("\n")
+
+        # --- OVERALL SUMMARY ---
+        f.write(f"{'='*60}\n")
+        f.write(f"  OVERALL SUMMARY\n")
+        f.write(f"{'='*60}\n\n")
+
+        # Collect all final ratings
+        all_ratings = {}
+        for entry in clear_entries:
+            all_ratings[entry['metric']] = entry['result']
+
+        # Add debate results (overwrite if debated)
+        if debate_result:
+            for metric, rating in debate_result.get('debate_results', {}).items():
+                all_ratings[metric] = rating
+
+        # Categorize metrics by rating
+        strengths = []  # Excellent, Good
+        watch = []      # Neutral
+        concerns = []   # Bad, Horrible
+        unresolved = [] # COMPLEX
+
+        for metric, rating in all_ratings.items():
+            rating_lower = rating.lower() if rating else ""
+            if rating_lower in ('excellent', 'good'):
+                strengths.append(f"{metric} ({rating})")
+            elif rating_lower == 'neutral':
+                watch.append(f"{metric}")
+            elif rating_lower in ('bad', 'horrible'):
+                concerns.append(f"{metric} ({rating})")
+            elif rating_lower == 'complex' or rating == 'COMPLEX':
+                unresolved.append(f"{metric}")
+
+        # Calculate verdict
+        num_experts = len(original_analyses)
+        total_metrics = len(all_ratings)
+        num_strong = len(strengths)
+        num_negative = len(concerns)
+        num_debates = len(complex_entries)
+        num_resolved = num_debates - len(unresolved)
+
+        # Determine overall verdict
+        if num_strong >= 6:
+            verdict = "Strong"
+        elif num_strong >= 4:
+            verdict = "Neutral"
+        else:
+            verdict = "Weak"
+
+        # Write summary
+        f.write(f"{ticker} Financial Summary ({num_experts} Experts, {total_metrics} Metrics)\n")
+        f.write(f"{'─'*45}\n")
+        verdict_line = f"Verdict: {verdict} ({num_strong}/{total_metrics} positive"
+        if num_negative > 0:
+            verdict_line += f", {num_negative}/{total_metrics} negative"
+        verdict_line += ")\n\n"
+        f.write(verdict_line)
+
+        if strengths:
+            f.write(f"Strengths: {', '.join(strengths)}\n")
+        if watch:
+            f.write(f"Watch: {', '.join(watch)}\n")
+        if concerns:
+            f.write(f"Concerns: {', '.join(concerns)}\n")
+        if unresolved:
+            f.write(f"Unresolved: {', '.join(unresolved)} (COMPLEX - requires review)\n")
+
+        f.write("\n")
+
+        # Debate summary line
+        if num_debates > 0:
+            f.write(f"{num_debates} metric(s) debated, {num_resolved} resolved.\n")
+        else:
+            f.write(f"No debates needed. All experts aligned.\n")
+
+        f.write("\n")
+
+
+def _find_matching_reason(metric: str, final_rating: str, analyses: list) -> str:
+    """
+    Find the reason from the first LLM whose rating matches the final rating.
+
+    Args:
+        metric: The metric name (e.g., 'revenue')
+        final_rating: The consensus rating (e.g., 'Good')
+        analyses: List of LLM analyses with {metric} and {metric}_reason fields
+
+    Returns:
+        The reason string, or empty string if not found
+    """
+    reason_key = f"{metric}_reason"
+
+    for analysis in analyses:
+        llm_rating = analysis.get(metric, "").lower()
+        if llm_rating == final_rating.lower():
+            return analysis.get(reason_key, "")
+
+    # Fallback: return first available reason
+    for analysis in analyses:
+        if reason_key in analysis and analysis[reason_key]:
+            return analysis[reason_key]
+
+    return ""
+
+
 def log_debate_transcript(debate_result: dict, log_file: str = None):
     """
     Log the full debate transcript.

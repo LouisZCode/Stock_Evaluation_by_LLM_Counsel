@@ -25,7 +25,7 @@ from functions import (
     )
 
 from vector_store import download_clean_fillings
-from logs import start_new_log, log_llm_conversation, log_llm_timing, log_harmonization, log_debate_transcript
+from logs import start_new_log, log_llm_conversation, log_llm_timing, log_harmonization, log_debate_transcript, log_final_report
 from .debate_orchestrator import run_debate
 from functions import (
     fill_missing_with_consensus, recalculate_strength_scores, harmonize_and_check_debates
@@ -186,6 +186,12 @@ async def response_quaterly(message, history):
                         else:
                             debate_summary.append(f"{metric}: {rating}")
                     yield f"Debate concluded: {', '.join(debate_summary)}\n\n"
+
+                    # Log final report with debate results
+                    log_final_report(ticker_symbol, harmonize_result, filled_analyses, debate_result, log_file)
+                else:
+                    # No debate needed - log final report without debate
+                    log_final_report(ticker_symbol, harmonize_result, filled_analyses, None, log_file)
 
                 # Use harmonized (and debated) analyses for the rest of the flow
                 LLM_Answers = harmonized_analyses
