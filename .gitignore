@@ -10,6 +10,7 @@ pre_designs/
 
 #Data area:
 data/
+reports/generated/
 
 # Logs
 *.log

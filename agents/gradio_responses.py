@@ -30,6 +30,7 @@ from .debate_orchestrator import run_debate
 from functions import (
     fill_missing_with_consensus, recalculate_strength_scores, harmonize_and_check_debates
 )
+from reports import generate_pdf
 
 
 """
@@ -189,9 +190,19 @@ async def response_quaterly(message, history):
 
                     # Log final report with debate results
                     log_final_report(ticker_symbol, harmonize_result, filled_analyses, debate_result, log_file)
+
+                    # Generate PDF report
+                    pdf_path = generate_pdf(ticker_symbol, harmonize_result, filled_analyses, debate_result)
+                    if pdf_path:
+                        yield f"PDF report generated: {pdf_path}\n\n"
                 else:
                     # No debate needed - log final report without debate
                     log_final_report(ticker_symbol, harmonize_result, filled_analyses, None, log_file)
+
+                    # Generate PDF report
+                    pdf_path = generate_pdf(ticker_symbol, harmonize_result, filled_analyses, None)
+                    if pdf_path:
+                        yield f"PDF report generated: {pdf_path}\n\n"
 
                 # Use harmonized (and debated) analyses for the rest of the flow
                 LLM_Answers = harmonized_analyses

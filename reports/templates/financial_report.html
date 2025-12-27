@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ ticker }} Financial Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #1a1a1a;
+            background: #fff;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #1a1a1a;
+            margin-bottom: 25px;
+        }
+
+        .header-left h1 {
+            font-size: 28pt;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .header-left .subtitle {
+            font-size: 10pt;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .score-badge {
+            font-size: 24pt;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .verdict-label {
+            font-size: 11pt;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        /* Verdict colors */
+        .extremely-risky { background: #fee2e2; color: #991b1b; }
+        .risky { background: #fef3c7; color: #92400e; }
+        .neutral { background: #f3f4f6; color: #374151; }
+        .safe { background: #d1fae5; color: #065f46; }
+        .extremely-safe { background: #a7f3d0; color: #047857; }
+
+        /* Sections */
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 13pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #1a1a1a;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 15px;
+        }
+
+        /* Metrics */
+        .metric {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-left: 4px solid #e5e7eb;
+        }
+
+        .metric.excellent { border-left-color: #10b981; }
+        .metric.good { border-left-color: #34d399; }
+        .metric.neutral { border-left-color: #9ca3af; }
+        .metric.bad { border-left-color: #f59e0b; }
+        .metric.horrible { border-left-color: #ef4444; }
+        .metric.complex { border-left-color: #8b5cf6; background: #faf5ff; }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .metric-name {
+            font-weight: 600;
+            font-size: 11pt;
+        }
+
+        .metric-rating {
+            font-size: 10pt;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+
+        .rating-excellent { background: #d1fae5; color: #065f46; }
+        .rating-good { background: #d1fae5; color: #065f46; }
+        .rating-neutral { background: #f3f4f6; color: #374151; }
+        .rating-bad { background: #fef3c7; color: #92400e; }
+        .rating-horrible { background: #fee2e2; color: #991b1b; }
+        .rating-complex { background: #ede9fe; color: #5b21b6; }
+
+        .metric-reason {
+            font-size: 10pt;
+            color: #4b5563;
+            margin-top: 6px;
+        }
+
+        .metric-before {
+            font-size: 9pt;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        /* Summary Box */
+        .summary-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #374151;
+        }
+
+        .summary-value {
+            color: #1a1a1a;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 9pt;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        /* Complex warning */
+        .complex-warning {
+            background: #faf5ff;
+            border: 1px solid #c4b5fd;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+
+        .complex-warning-title {
+            font-weight: 600;
+            color: #5b21b6;
+            margin-bottom: 4px;
+        }
+
+        .complex-warning-text {
+            font-size: 10pt;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <h1>{{ ticker }}</h1>
+            <div class="subtitle">Financial Analysis Report - {{ generated_date }}</div>
+        </div>
+        <div class="header-right">
+            <div class="score-badge {{ verdict_class }}">{{ score_display }}/16</div>
+            <div class="verdict-label {{ verdict_class }}">{{ verdict }}</div>
+        </div>
+    </div>
+
+    <!-- Clear Metrics -->
+    {% if clear_metrics %}
+    <div class="section">
+        <div class="section-title">Clear Metrics ({{ clear_metrics|length }}/8)</div>
+        {% for metric in clear_metrics %}
+        <div class="metric {{ metric.rating_class }}">
+            <div class="metric-header">
+                <span class="metric-name">{{ metric.name | replace('_', ' ') | title }}</span>
+                <span class="metric-rating rating-{{ metric.rating_class }}">{{ metric.rating }}</span>
+            </div>
+            {% if metric.reason %}
+            <div class="metric-reason">{{ metric.reason }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Complex Metrics -->
+    {% if complex_metrics %}
+    <div class="section">
+        <div class="section-title">Debated Metrics ({{ complex_metrics|length }}/8)</div>
+        {% for metric in complex_metrics %}
+        <div class="metric {{ metric.rating_class }}">
+            <div class="metric-before">Before: {{ metric.before_ratings | join(', ') }}</div>
+            <div class="metric-header">
+                <span class="metric-name">{{ metric.name | replace('_', ' ') | title }}</span>
+                <span class="metric-rating rating-{{ metric.rating_class }}">
+                    {% if metric.is_complex %}COMPLEX{% else %}{{ metric.final_rating }}{% endif %}
+                </span>
+            </div>
+            {% if metric.reason %}
+            <div class="metric-reason">{{ metric.reason }}</div>
+            {% elif metric.is_complex %}
+            <div class="metric-reason" style="color: #5b21b6;">Requires user review - no consensus reached</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Summary -->
+    <div class="section">
+        <div class="section-title">Summary</div>
+        <div class="summary-box">
+            <div class="summary-row">
+                <span class="summary-label">Score:</span>
+                <span class="summary-value">{{ score_display }}/16 ({{ verdict }})</span>
+            </div>
+            {% if strengths %}
+            <div class="summary-row">
+                <span class="summary-label">Strengths:</span>
+                <span class="summary-value">{{ strengths | map(attribute='name') | join(', ') | replace('_', ' ') | title }}</span>
+            </div>
+            {% endif %}
+            {% if watch %}
+            <div class="summary-row">
+                <span class="summary-label">Watch:</span>
+                <span class="summary-value">{{ watch | map(attribute='name') | join(', ') | replace('_', ' ') | title }}</span>
+            </div>
+            {% endif %}
+            {% if concerns %}
+            <div class="summary-row">
+                <span class="summary-label">Concerns:</span>
+                <span class="summary-value">{{ concerns | map(attribute='name') | join(', ') | replace('_', ' ') | title }}</span>
+            </div>
+            {% endif %}
+            {% if unresolved %}
+            <div class="summary-row">
+                <span class="summary-label">Unresolved:</span>
+                <span class="summary-value" style="color: #5b21b6;">{{ unresolved | map(attribute='name') | join(', ') | replace('_', ' ') | title }}</span>
+            </div>
+            {% endif %}
+            <div class="summary-row">
+                <span class="summary-label">Analysis:</span>
+                <span class="summary-value">{{ num_experts }} experts, {{ num_debates }} debate(s), {{ num_resolved }} resolved</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Generated by LLM Counsel - {{ generated_date }} at {{ generated_time }}
+    </div>
+</body>
+</html>
