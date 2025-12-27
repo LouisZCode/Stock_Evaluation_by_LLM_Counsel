@@ -5,6 +5,7 @@ Uses weasyprint to convert HTML templates to PDF.
 """
 
 import os
+import math
 from datetime import datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
@@ -135,6 +136,16 @@ def _prepare_report_data(
     concerns = [m for m in clear_metrics + complex_metrics if m['rating_class'] in ('bad', 'horrible')]
     unresolved = [m for m in complex_metrics if m.get('is_complex')]
 
+    # Generate gauge SVG
+    gauge_svg = _generate_gauge_svg(score, verdict)
+
+    # Get overall summary from first analysis that has it
+    overall_summary = ""
+    for analysis in original_analyses:
+        if analysis.get('overall_summary'):
+            overall_summary = analysis['overall_summary']
+            break
+
     return {
         'ticker': ticker,
         'generated_date': datetime.now().strftime('%B %d, %Y'),
@@ -143,6 +154,8 @@ def _prepare_report_data(
         'score_display': f"+{score}" if score > 0 else str(score),
         'verdict': verdict,
         'verdict_class': verdict.lower().replace(' ', '-'),
+        'gauge_svg': gauge_svg,
+        'overall_summary': overall_summary,
         'clear_metrics': clear_metrics,
         'complex_metrics': complex_metrics,
         'strengths': strengths,
@@ -213,3 +226,48 @@ def _get_rating_class(rating: str) -> str:
     if rating_lower in ('excellent', 'good', 'neutral', 'bad', 'horrible', 'complex'):
         return rating_lower
     return "neutral"
+
+
+def _generate_gauge_svg(score: int, verdict: str) -> str:
+    """Generate semi-circle gauge SVG with needle."""
+    # Normalize score from -16..+16 to 0..180 degrees
+    # -16 = 180° (left), 0 = 90° (top), +16 = 0° (right)
+    angle = 180 - ((score + 16) / 32) * 180
+
+    # Needle endpoint calculation
+    needle_length = 70
+    needle_x = 100 + needle_length * math.cos(math.radians(angle))
+    needle_y = 100 - needle_length * math.sin(math.radians(angle))
+
+    return f'''
+    <svg width="220" height="130" viewBox="0 0 220 130">
+        <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#ef4444"/>
+                <stop offset="35%" style="stop-color:#f59e0b"/>
+                <stop offset="50%" style="stop-color:#9ca3af"/>
+                <stop offset="65%" style="stop-color:#34d399"/>
+                <stop offset="100%" style="stop-color:#10b981"/>
+            </linearGradient>
+        </defs>
+
+        <!-- Gauge arc -->
+        <path d="M 30 100 A 80 80 0 0 1 190 100"
+              fill="none"
+              stroke="url(#gaugeGradient)"
+              stroke-width="12"
+              stroke-linecap="round"/>
+
+        <!-- Needle -->
+        <line x1="110" y1="100" x2="{needle_x + 10}" y2="{needle_y}"
+              stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="110" cy="100" r="6" fill="#1a1a1a"/>
+
+        <!-- Labels -->
+        <text x="5" y="120" font-size="7" fill="#991b1b" font-weight="600">Extreme Risk</text>
+        <text x="160" y="120" font-size="7" fill="#059669" font-weight="600">Extreme Safety</text>
+
+        <!-- Verdict display -->
+        <text x="110" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1a1a">{verdict}</text>
+    </svg>
+    '''

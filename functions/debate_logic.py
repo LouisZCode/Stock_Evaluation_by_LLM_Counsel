@@ -217,9 +217,15 @@ def fill_missing_with_consensus(analyses: list[dict]) -> list[dict]:
             consensus_value = non_missing[0]
             missing_idx = missing_indices[0]
             filled[missing_idx][metric] = consensus_value
-            # Also fill the reason field
+            # Also fill the reason field - grab from first LLM that has the reason
             reason_key = f"{metric}_reason"
-            filled[missing_idx][reason_key] = f"Filled by consensus ({consensus_value})"
+            for i, analysis in enumerate(analyses):
+                if i not in missing_indices and analysis.get(reason_key):
+                    filled[missing_idx][reason_key] = analysis[reason_key]
+                    break
+            else:
+                # Fallback if no reason found (shouldn't happen normally)
+                filled[missing_idx][reason_key] = f"Filled by consensus ({consensus_value})"
 
     return filled
 
