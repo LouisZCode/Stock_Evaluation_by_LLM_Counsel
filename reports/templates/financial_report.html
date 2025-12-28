@@ -85,15 +85,11 @@
             padding: 12px 15px;
             background: #f9fafb;
             border-radius: 6px;
-            border-left: 4px solid #e5e7eb;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
-        .metric.excellent { border-left-color: #10b981; }
-        .metric.good { border-left-color: #34d399; }
-        .metric.neutral { border-left-color: #9ca3af; }
-        .metric.bad { border-left-color: #dc2626; }
-        .metric.horrible { border-left-color: #ef4444; }
-        .metric.complex { border-left-color: #8b5cf6; background: #faf5ff; }
+        .metric.complex { background: #faf5ff; }
 
         .metric-header {
             display: flex;
@@ -186,9 +182,8 @@
 
         /* Overall Summary Box */
         .overall-summary {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #3b82f6;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
             padding: 15px 18px;
             margin-bottom: 25px;
@@ -197,15 +192,39 @@
         .overall-summary-title {
             font-size: 11pt;
             font-weight: 700;
-            color: #1e40af;
+            color: #1a1a1a;
             margin-bottom: 8px;
         }
 
         .overall-summary-text {
             font-size: 10pt;
-            color: #475569;
+            color: #374151;
             line-height: 1.6;
         }
+
+        /* Section description */
+        .section-desc {
+            font-size: 9pt;
+            color: #6b7280;
+            margin-top: -10px;
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        /* Colored circle indicator */
+        .rating-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .dot-excellent { background-color: #059669; }
+        .dot-good { background-color: #10b981; }
+        .dot-neutral { background-color: #9ca3af; }
+        .dot-bad { background-color: #dc2626; }
+        .dot-horrible { background-color: #991b1b; }
+        .dot-complex { background-color: #7c3aed; }
     </style>
 </head>
 <body>
@@ -234,9 +253,11 @@
     {% if clear_metrics %}
     <div class="section">
         <div class="section-title">Clear Metrics ({{ clear_metrics|length }}/8)</div>
+        <div class="section-desc">All experts agreed on these metrics without requiring deeper analysis.</div>
         {% for metric in clear_metrics %}
-        <div class="metric {{ metric.rating_class }}">
+        <div class="metric">
             <div class="metric-header">
+                <span class="rating-dot dot-{{ metric.rating_class }}"></span>
                 <span class="metric-name">{{ metric.name | replace('_', ' ') | title }}</span>
                 <span>—</span>
                 <span class="metric-rating rating-{{ metric.rating_class }}">{{ metric.rating }}</span>
@@ -253,20 +274,35 @@
     {% if complex_metrics %}
     <div class="section">
         <div class="section-title">Debated Metrics ({{ complex_metrics|length }}/8)</div>
+        <div class="section-desc">These metrics had differing expert opinions and required deeper analysis.</div>
         {% for metric in complex_metrics %}
-        <div class="metric {{ metric.rating_class }}">
-            <div class="metric-before">Before: {{ metric.before_ratings | join(', ') }}</div>
+        <div class="metric {% if metric.is_complex %}complex{% endif %}">
             <div class="metric-header">
+                <span class="rating-dot dot-{% if metric.is_complex %}complex{% else %}{{ metric.rating_class }}{% endif %}"></span>
                 <span class="metric-name">{{ metric.name | replace('_', ' ') | title }}</span>
                 <span>—</span>
-                <span class="metric-rating rating-{{ metric.rating_class }}">
-                    {% if metric.is_complex %}COMPLEX{% else %}{{ metric.final_rating }}{% endif %}
+                <span class="metric-rating rating-{% if metric.is_complex %}complex{% else %}{{ metric.rating_class }}{% endif %}">
+                    Consensus: {% if metric.is_complex %}Complex{% else %}{{ metric.final_rating }}{% endif %}
                 </span>
             </div>
-            {% if metric.reason %}
-            <div class="metric-reason">{{ metric.reason }}</div>
+            <div class="metric-before">Before Deeper Analysis: {{ metric.before_ratings | join(', ') }}</div>
+            {% if metric.expert_reasons %}
+            <div class="metric-reason" style="margin-top: 8px;">
+                {% for er in metric.expert_reasons %}
+                <div style="margin-bottom: 4px;"><strong>{{ er.rating }}:</strong> {{ er.reason }}</div>
+                {% endfor %}
+                <div style="margin-top: 6px; font-size: 9pt; color: #6b7280;">To get the full deep analysis script, check your watchlist.</div>
+            </div>
+            {% endif %}
+            {% if metric.debate_rounds %}
+            <div class="metric-reason" style="font-style: italic; margin-top: 12px;">
+                Our experts conducted <strong>{{ metric.debate_rounds }}</strong> round(s) of deeper analysis.
+            </div>
+            {% endif %}
+            {% if metric.reason and not metric.is_complex %}
+            <div class="metric-reason" style="margin-top: 6px;"><strong>Final Assessment:</strong> {{ metric.reason }}</div>
             {% elif metric.is_complex %}
-            <div class="metric-reason" style="color: #5b21b6;">Requires user review - no consensus reached</div>
+            <div class="metric-reason" style="color: #5b21b6; margin-top: 6px;">No consensus reached - requires user review.</div>
             {% endif %}
         </div>
         {% endfor %}
@@ -301,10 +337,6 @@
                 <span class="summary-value" style="color: #5b21b6;">{{ unresolved | map(attribute='name') | join(', ') | replace('_', ' ') | title }}</span>
             </div>
             {% endif %}
-            <div class="summary-row">
-                <span class="summary-label">Analysis:</span>
-                <span class="summary-value">{{ num_experts }} experts, {{ num_debates }} debate(s), {{ num_resolved }} resolved</span>
-            </div>
         </div>
     </div>
 

@@ -109,13 +109,18 @@ def _prepare_report_data(
         final_rating = debate_results.get(metric, 'Pending')
         reason = _find_matching_reason(metric, final_rating, original_analyses) if final_rating not in ('COMPLEX', 'Pending') else ''
 
+        # Gather unique expert reasons grouped by rating
+        expert_reasons = _get_expert_reasons_by_rating(metric, original_analyses)
+
         complex_metrics.append({
             'name': metric,
-            'before_ratings': original_ratings,
+            'before_ratings': [r for r in original_ratings if r],  # Filter out None
             'final_rating': final_rating,
             'reason': reason[:200] + '...' if len(reason) > 200 else reason,
             'is_complex': final_rating == 'COMPLEX',
             'rating_class': _get_rating_class(final_rating),
+            'expert_reasons': expert_reasons,
+            'debate_rounds': 3,  # Default debate rounds
         })
 
     # Collect all final ratings for scoring
@@ -228,46 +233,67 @@ def _get_rating_class(rating: str) -> str:
     return "neutral"
 
 
-def _generate_gauge_svg(score: int, verdict: str) -> str:
-    """Generate semi-circle gauge SVG with needle."""
-    # Normalize score from -16..+16 to 0..180 degrees
-    # -16 = 180° (left), 0 = 90° (top), +16 = 0° (right)
-    angle = 180 - ((score + 16) / 32) * 180
+def _get_expert_reasons_by_rating(metric: str, analyses: list) -> list:
+    """
+    Get unique expert reasons grouped by rating for a metric.
+    Returns list of {'rating': 'Good', 'reason': '...'} dicts.
+    Only includes unique ratings to avoid repetition.
+    """
+    reason_key = f"{metric}_reason"
+    seen_ratings = set()
+    expert_reasons = []
 
-    # Needle endpoint calculation
-    needle_length = 70
-    needle_x = 100 + needle_length * math.cos(math.radians(angle))
-    needle_y = 100 - needle_length * math.sin(math.radians(angle))
+    for analysis in analyses:
+        raw_rating = analysis.get(metric, '')
+        if not raw_rating or "not enough information" in raw_rating.lower():
+            continue
+
+        # Extract first word as rating
+        rating = raw_rating.split()[0].capitalize() if raw_rating else ''
+        if rating and rating not in seen_ratings:
+            seen_ratings.add(rating)
+            reason = analysis.get(reason_key, '')
+            if reason and "not enough information" not in reason.lower():
+                # Truncate long reasons
+                truncated = reason[:150] + '...' if len(reason) > 150 else reason
+                expert_reasons.append({
+                    'rating': rating,
+                    'reason': truncated
+                })
+
+    return expert_reasons
+
+
+def _generate_gauge_svg(score: int, verdict: str) -> str:
+    """Generate horizontal gradient bar with arrow marker."""
+    # Normalize score from -16..+16 to 0..100% position
+    # -16 = 0% (left), 0 = 50% (center), +16 = 100% (right)
+    position_percent = ((score + 16) / 32) * 100
+    arrow_x = 10 + (position_percent / 100) * 180  # 10 to 190 range
 
     return f'''
-    <svg width="220" height="130" viewBox="0 0 220 130">
+    <svg width="220" height="65" viewBox="0 0 220 65">
         <defs>
-            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style="stop-color:#ef4444"/>
-                <stop offset="35%" style="stop-color:#f59e0b"/>
+            <linearGradient id="barGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#dc2626"/>
+                <stop offset="25%" style="stop-color:#f59e0b"/>
                 <stop offset="50%" style="stop-color:#9ca3af"/>
-                <stop offset="65%" style="stop-color:#34d399"/>
-                <stop offset="100%" style="stop-color:#10b981"/>
+                <stop offset="75%" style="stop-color:#34d399"/>
+                <stop offset="100%" style="stop-color:#059669"/>
             </linearGradient>
         </defs>
 
-        <!-- Gauge arc -->
-        <path d="M 30 100 A 80 80 0 0 1 190 100"
-              fill="none"
-              stroke="url(#gaugeGradient)"
-              stroke-width="12"
-              stroke-linecap="round"/>
+        <!-- Verdict text above arrow -->
+        <text x="{arrow_x}" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#1a1a1a">{verdict}</text>
 
-        <!-- Needle -->
-        <line x1="110" y1="100" x2="{needle_x + 10}" y2="{needle_y}"
-              stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="110" cy="100" r="6" fill="#1a1a1a"/>
+        <!-- Arrow marker -->
+        <polygon points="{arrow_x},28 {arrow_x - 6},18 {arrow_x + 6},18" fill="#1a1a1a"/>
+
+        <!-- Horizontal gradient bar -->
+        <rect x="10" y="30" width="180" height="10" rx="5" fill="url(#barGradient)"/>
 
         <!-- Labels -->
-        <text x="5" y="120" font-size="7" fill="#991b1b" font-weight="600">Extreme Risk</text>
-        <text x="160" y="120" font-size="7" fill="#059669" font-weight="600">Extreme Safety</text>
-
-        <!-- Verdict display -->
-        <text x="110" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1a1a">{verdict}</text>
+        <text x="10" y="55" font-size="7" fill="#991b1b" font-weight="600">Extreme Risk</text>
+        <text x="210" y="55" text-anchor="end" font-size="7" fill="#059669" font-weight="600">Extreme Safety</text>
     </svg>
     '''
