@@ -22,7 +22,7 @@ NEUTRAL_TIER = {'neutral'}              # Ambiguous - always triggers debate
 
 METRICS = [
     'revenue', 'net_income', 'gross_margin', 'operational_costs',
-    'cash_flow', 'quaterly_growth', 'total_assets', 'total_debt'
+    'cash_flow', 'quarterly_growth', 'total_assets', 'total_debt'
 ]
 
 

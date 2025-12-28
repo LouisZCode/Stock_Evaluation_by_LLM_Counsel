@@ -2,7 +2,7 @@
 Here you will find the response Logic between Gradio and the Agents for the project
 
 You have:
-response_quaterly, response_my_portfolio, find_opportunities, update_risk_state
+response_quarterly, response_my_portfolio, find_opportunities, update_risk_state
 """
 
 
@@ -34,9 +34,9 @@ from reports import generate_pdf
 
 
 """
-Agent that reads the vector stores, and gives you info about the quaterly information
+Agent that reads the vector stores, and gives you info about the quarterly information
 """
-async def response_quaterly(message, history):
+async def response_quarterly(message, history):
 
     check_ticker = checker_agent.invoke(
         {"messages": [{"role": "user", "content": message}]},

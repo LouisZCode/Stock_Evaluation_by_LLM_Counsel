@@ -23,7 +23,7 @@ from functions import (
 load_dotenv()
 
 prompts = load_prompts()
-quarter_results_prompt = prompts["QUATERLY_RESULTS_EXPERT"]
+quarter_results_prompt = prompts["QUARTERLY_RESULTS_EXPERT"]
 my_portfolio_prompt = prompts["MY_PORTFOLIO_EXPERT"]
 checker_prompt = prompts["CHECKER"]
 counsel_voice = prompts["THE_COUNSEL_VOICE"]
@@ -44,8 +44,8 @@ class FinancialInformation(TypedDict):
     operational_costs_reason: str
     cash_flow: str
     cash_flow_reason: str
-    quaterly_growth: str
-    quaterly_growth_reason: str
+    quarterly_growth: str
+    quarterly_growth_reason: str
     total_assets: str
     total_assets_reason: str
     total_debt: str

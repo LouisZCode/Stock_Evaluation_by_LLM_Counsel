@@ -1,5 +1,5 @@
 
-from agents import response_quaterly,response_my_portfolio, _update_portfolio_info, find_opportunities, update_risk_state
+from agents import response_quarterly,response_my_portfolio, _update_portfolio_info, find_opportunities, update_risk_state
 from config import portfolio_path
 import pandas as pd
 import gradio as gr
@@ -15,7 +15,7 @@ with gr.Blocks() as demo:
         with gr.Tab("Counsel of LLMs"):
             gr.Markdown("# The Counsel that will research and categorize a stock for you...") 
             gr.ChatInterface(
-                fn=response_quaterly
+                fn=response_quarterly
             )
             gr.Markdown("### NOTE: Answer based on real SEC data, but on mock stock price and P/E ratio because of API Costs.\nPlease dont use this Tech-Demo as financial advice") 
 
